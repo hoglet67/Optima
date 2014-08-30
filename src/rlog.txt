@@ -1,0 +1,22 @@
+loading rom roms/akernel.rom at 04000, size=1000 Loading roms/akernel.rom failed !
+loading rom roms/dosrom.rom at 03000, size=1000 Loading roms/dosrom.rom failed !
+loading rom roms/afloat.rom at 02000, size=1000 Loading roms/afloat.rom failed !
+loading rom roms/abasic.rom at 01000, size=1000 Loading roms/abasic.rom failed !
+loading rom roms/axr1.rom at 00000, size=1000 Loading roms/axr1.rom failed !
+loading rom roms/atom_bbc_basic_os.rom at 05000, size=1000 Loading roms/atom_bbc_basic_os.rom failed !
+loading rom roms/basic1.rom at 06000, size=4000 Loading roms/basic1.rom failed !
+loading rom roms/ramrom.rom at 0A000, size=20000 Loading roms/ramrom.rom failed !
+Running with standard roms
+rom=E32CD010
+kernel=E32D1010
+basic=E32CE010
+ROM_OFS_RR_AKERNEL=1D000
+Loading :0  
+Loading :1  
+InitMMC()
+InitMMC():Done
+Running with standard roms
+rom=E32CD010
+kernel=E32D1010
+basic=E32CE010
+ROM_OFS_RR_AKERNEL=1D000
