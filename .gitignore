@@ -1,1 +1,6 @@
 mmc/
+*.o
+Atomulator
+src/Atomulator
+*~
+#*
