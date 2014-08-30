@@ -2,9 +2,10 @@
    Debugger*/
 
 #include "debugger.h"
+#include "6502.h"
 
-#define readmem(a) readmeml(a)
-#define writemem(a, v) writememl(a, v)
+//#define readmem(a) readmeml(a)
+//#define writemem(a, v) writememl(a, v)
 
 int debug;
 int indebug = 0;
@@ -523,6 +524,8 @@ void dodebugger()
 	uint8_t temp;
 	char outs[256];
 	char ins[256];
+
+	uint8_t opcode = the_cpu->mem[the_cpu->pc];
 
 	if ((!opcode) && debug_on_brk)
 	{

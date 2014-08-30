@@ -6,6 +6,8 @@
 #include <allegro.h>
 #include "atom.h"
 #include "atommc.h"
+#include "6502.h"
+
 
 char exedir[MAXPATH+1];
 
@@ -28,6 +30,8 @@ int bbcmode = 0;
 int fasttape = 0;
 char discfn[260];
 
+extern M6502* the_cpu;
+
 FILE *rlog;
 void rpclog(char *format, ...)
 {
@@ -49,7 +53,7 @@ void rpclog(char *format, ...)
 }
 
 int tapeon;
-uint8_t *ram;
+//uint8_t *ram;
 char filelist[256][17];
 int filelistsize;
 int filepos[256];
@@ -64,14 +68,14 @@ void atom_reset(int power_on)
 //	memset(ram, 0, 0x10000);
 	if(power_on)
 	{
-		ram[8] = rand();
-		ram[9] = rand();
-		ram[10] = rand();
-		ram[11] = rand();
+		the_cpu->mem[8] = rand();
+		the_cpu->mem[9] = rand();
+		the_cpu->mem[10] = rand();
+		the_cpu->mem[11] = rand();
 		
 		// Clear BBC basic workspace.
 		if(bbcmode)
-			memset(&ram[0], 0, 0x10000);
+			memset(&the_cpu->mem[0], 0, 0x10000);
 	}
 	resetvia();
 	sid_reset();
@@ -234,7 +238,9 @@ void atom_run()
 
       double t1 = al_get_time();
 
-      exec6502(colourboard ? 312 : 262, 64, true, true);
+      // Alse executes a frame's worth of 6502 code...
+      update_atom_display(colourboard ? 312 : 262);
+      // debuglog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
 
       //      if (count % 25 == 0) {
       //double t2 = al_get_time();

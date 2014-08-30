@@ -67,6 +67,7 @@ int keyrow;
 void write8255(uint16_t addr, uint8_t val)
 {
 	int oldgfx = gfxmode;
+
 	
 	switch (addr & 0xF)
 	{
@@ -99,7 +100,7 @@ void write8255(uint16_t addr, uint8_t val)
 		break;
 //                        rpclog("8255 port 3 %02X\n",val);
 	}
-//        printf("Write 8255 %04X %02X\n",addr,val);
+        //debuglog("Write 8255 %04X %02X\n",addr,val);
 }
 
 uint8_t read8255(uint16_t addr)
@@ -113,7 +114,7 @@ uint8_t read8255(uint16_t addr)
 	al_get_keyboard_state(&key_state);
 
 
-//        printf("Read 8255 %04X %04X\n",addr,pc);
+        //debuglog("Read 8255 %04X %04X\n",addr,pc);
 	switch (addr & 3)
 	{
 	case 0:

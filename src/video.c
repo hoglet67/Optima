@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <allegro.h>
 #include "atom.h"
+#include "6502.h"
+
+extern M6502* the_cpu;
 
 int fullscreen = 0;
 int winsizex = 512, winsizey = 384;
@@ -120,19 +123,16 @@ void initvideo()
   screenW = 256;
   screenH = 192;
 
+  ALLEGRO_MONITOR_INFO info;
 
-  // TODO: Determine these dynamically
-
-  int displayW = 1920;
-  int displayH = 1080;
+  al_get_monitor_info(0, &info);
+  int displayW = info.x2 - info.x1;
+  int displayH = info.y2 - info.y1;
+  debuglog("screen is %d x %d\n", displayW, displayH);
 
   al_set_new_display_flags(ALLEGRO_FULLSCREEN);
 
   display = al_create_display(displayW, displayH);
-  displayW = al_get_display_width(display);
-  displayH = al_get_display_height(display);
-
-  debuglog("screen is %d x %d\n", displayW, displayH);
 
   int sx = displayW / screenW;
   int sy = displayH / screenH;
@@ -162,7 +162,7 @@ void initvideo()
 }
 
 
-uint8_t *ram;
+//uint8_t *ram;
 int cy = 0, sy = 0;
 
 
@@ -298,7 +298,7 @@ void drawline(int line)
 			}
 			addr = (cy << 5) + 0x8000;
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[addr++];
+				fetcheddat[x] = the_cpu->mem[addr++];
 			break;
 		
 		/* Propper graphics modes */
@@ -320,7 +320,7 @@ void drawline(int line)
 			
 			addr = (((line + 1) / 3) << 4) | 0x8000;
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[addr + (x >> 1)];
+				fetcheddat[x] = the_cpu->mem[addr + (x >> 1)];
 			
 			break;
 			
@@ -340,7 +340,7 @@ void drawline(int line)
 			
 			addr = (((line + 1) / 3) << 4) | 0x8000;
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[addr + (x >> 1)];
+				fetcheddat[x] = the_cpu->mem[addr + (x >> 1)];
 			
 			break;
 
@@ -362,7 +362,7 @@ void drawline(int line)
 
 			addr = (((line + 1) / 3) << 5) | 0x8000;
 			for (x = 0; x < 32; x++)
-			fetcheddat[x] = ram[addr + x];
+			fetcheddat[x] = the_cpu->mem[addr + x];
 			break;
 
 /* END CHANGES */
@@ -383,7 +383,7 @@ void drawline(int line)
 
 			addr = (((line + 1) >> 1) << 4) | 0x8000;
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[addr + (x >> 1)];
+				fetcheddat[x] = the_cpu->mem[addr + (x >> 1)];
 
 			break;
 
@@ -404,7 +404,7 @@ void drawline(int line)
 			addr = (((line + 1) >> 1) << 5) | 0x8000;
 
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[addr + x];
+				fetcheddat[x] = the_cpu->mem[addr + x];
 
 			break;
 
@@ -424,7 +424,7 @@ void drawline(int line)
 
 			addr = ((line + 1) << 4) | 0x8000;
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[addr + (x >> 1)];
+				fetcheddat[x] = the_cpu->mem[addr + (x >> 1)];
 
 			break;
 
@@ -445,7 +445,7 @@ void drawline(int line)
 			addr = ((line + 1) << 5) | 0x8000;
 
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[addr + x];
+				fetcheddat[x] = the_cpu->mem[addr + x];
 
 			break;
 
@@ -465,7 +465,7 @@ void drawline(int line)
 			addr = ((line + 1) << 5) | 0x8000;
 /*rpclog("addr=%04X\n",addr);*/
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[addr + x];
+				fetcheddat[x] = the_cpu->mem[addr + x];
 
 			break;
 
@@ -543,13 +543,13 @@ void drawline(int line)
 		case 8: case 10: case 12: case 14:
 		case 5: case 9: case 13: case 15:
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[0x8000 + x];
+				fetcheddat[x] = the_cpu->mem[0x8000 + x];
 			break;
 /* END CHANGES */
 
 		case 1: case 3: case 7: case 11:         /*16-byte per line*/
 			for (x = 0; x < 32; x++)
-				fetcheddat[x] = ram[0x8000 + (x >> 1)];
+				fetcheddat[x] = the_cpu->mem[0x8000 + (x >> 1)];
 			break;
 
 		}

@@ -1,80 +1,59 @@
-/*Atomulator v1.0 by Tom Walker
-   6502 emulation*/
-#include <allegro.h>
-#include <string.h>
+/*
+ * 6502 CPU emulation (C version)
+ *
+ * Written by Reuben Scratton.
+ *
+ * Originally by Tom Walker
+ *
+ */
+
 #include <stdio.h>
+#include "6502.h"
 #include "atom.h"
 #include "roms.h"
 #include "8271.h"
 #include "atommc.h"
 
-int tapeon;
-int totcyc = 0;
-int tapecyc = 635;
-void dumpregs();
-
-int skipint, nmi, nmilock, interrupt = 0, timetolive, oldnmi;
-int skipint2, oldnmi2;
-
-uint8_t *ram, *rom;
-
-// Pointers to memory blocks
-uint8_t *utility_ptr;
-uint8_t *abasic_ptr;
-uint8_t *afloat_ptr;
-uint8_t *dosrom_ptr;
-uint8_t *akernel_ptr;
-
-/*6502 registers*/
-uint8_t a, x, y, s;
-uint16_t pc;
-/*struct
-   {
-        int c,z,i,d,v,n;
-   } p;*/
-
-/*Memory structures*/
-uint8_t *mem[0x100];
-int memstat[0x100];
-
-int cycles = 0;
-int output = 0;
-int ins = 0;
 
 /* RAMROM */
 int RR_bankreg	= 0;
 int RR_enables	= 0;
 int RR_jumpers	= 0;
 
-void dumpram()
-{
-	FILE *f = fopen("ram.dmp", "wb");
 
-	fwrite(ram, 0x10000, 1, f);
-	fclose(f);
-}
+M6502 acpu;
+M6502* the_cpu = &acpu;
+
+//uint8_t ram_fe30,ram_fe34;
+uint8_t* roms;
+
+
+uint8_t acccon;
+int otherstuffcount=0;
+int romsel;
+//int FEslowdown[8]={1,0,1,1,0,0,1,0};
+
+
+
 
 void initmem()
 {
-	int c;
+  //	int c;
 
-	ram = (uint8_t*)malloc(0x10000);
-	rom = (uint8_t*)malloc(ROM_MEM_SIZE + RAM_ROM_SIZE);
+	the_cpu->mem = (uint8_t*)malloc(0x10000);
 	
-	memset(ram, 0, 0x10000);
+	memset(the_cpu->mem, 0, 0x10000);
 	
-	for (c = 0; c < 0x100; c++)
-		memstat[c] = 2;
+	//	for (c = 0; c < 0x100; c++)
+	  //		memstat[c] = 2;
 	
-	ram[8] = rand() & 255;
-	ram[9] = rand() & 255;
-	ram[10] = rand() & 255;
-	ram[11] = rand() & 255;
+	the_cpu->mem[8] = rand() & 255;
+	the_cpu->mem[9] = rand() & 255;
+	the_cpu->mem[10] = rand() & 255;
+	the_cpu->mem[11] = rand() & 255;
 }
 
-void load_rom(char	*Name,
-			  int 	Size,
-	          int 	Offset)
+void load_rom(char *Name, int Size, int	Offset)
 {
 	FILE    *RomFile;
 	int 	bytes;
@@ -84,7 +63,7 @@ void load_rom(char	*Name,
 	RomFile = fopen(Name, "rb");
 	if(RomFile!=NULL)
 	{
-		bytes = fread(&rom[Offset], 1, Size, RomFile);
+		bytes = fread(&the_cpu->mem[Offset], 1, Size, RomFile);
 		fclose(RomFile);
 
 		rpclog("bytes read %X\n", bytes);
@@ -95,18 +74,19 @@ void load_rom(char	*Name,
 
 void loadroms()
 {
-	load_rom("roms/akernel.rom",			ROM_SIZE_ATOM,          ROM_OFS_AKERNEL);
-	load_rom("roms/dosrom.rom",             ROM_SIZE_ATOM,          ROM_OFS_DOSROM);
-	load_rom("roms/afloat.rom",             ROM_SIZE_ATOM,          ROM_OFS_AFLOAT);
-	load_rom("roms/abasic.rom",             ROM_SIZE_ATOM,          ROM_OFS_ABASIC);
-	load_rom("roms/axr1.rom",               ROM_SIZE_ATOM,          ROM_OFS_UTILITY);
-	load_rom("roms/atom_bbc_basic_os.rom",  ROM_SIZE_ATOM,          ROM_OFS_BBC_OS);
-	load_rom("roms/basic1.rom",             ROM_SIZE_BBC_BASIC, 	ROM_OFS_BBC_BASIC);
-	load_rom("roms/ramrom.rom",             RAM_ROM_SIZE,           ROM_OFS_RAMROM);
+	load_rom("roms/akernel_patched.rom",	ROM_SIZE_ATOM,          0xf000);
+	load_rom("roms/atommc2.rom",            ROM_SIZE_ATOM,          0xe000);
+	load_rom("roms/afloat_patched.rom",     ROM_SIZE_ATOM,          0xd000);
+	load_rom("roms/abasic.rom",             ROM_SIZE_ATOM,          0xc000);
+	load_rom("roms/axr1.rom",               ROM_SIZE_ATOM,          0xa000);
+	//	load_rom("roms/atom_bbc_basic_os.rom",  ROM_SIZE_ATOM,          ROM_OFS_BBC_OS);
+	//	load_rom("roms/basic1.rom",             ROM_SIZE_BBC_BASIC, 	ROM_OFS_BBC_BASIC);
+	//	load_rom("roms/ramrom.rom",             RAM_ROM_SIZE,           ROM_OFS_RAMROM);
 }
 
 void set_rr_ptrs()
 {
+#if 0
 	if (ramrom_enable)
 	{
 		// Select what is mapped into $A000 block, this allows the 
@@ -137,12 +117,13 @@ void set_rr_ptrs()
 			akernel_ptr     = &rom[ROM_OFS_AKERNEL];
 		}
 	}
+#endif
 }
 
 void reset_rom()
 {
 	debuglog("reset_rom(), ramrom=%d, bbcmode=%d\n",ramrom_enable,bbcmode);
-	
+#if 0	
 	if (!ramrom_enable)
 	{
 		utility_ptr     = &rom[ROM_OFS_UTILITY];
@@ -161,66 +142,16 @@ void reset_rom()
 	}
 	rpclog("rom=%X\nkernel=%X\nbasic=%X\n",rom,akernel_ptr,abasic_ptr);
 	rpclog("ROM_OFS_RR_AKERNEL=%5X\n", ROM_OFS_RR_AKERNEL);
-	
+#endif	
 	debuglog("reset_rom():done\n");
 }
 
-uint8_t fetcheddat[32];
 
-uint8_t readmeml(uint16_t addr)
+uint8_t readmem_ex(uint16_t addr)
 {
-	if (debugon)
-		debugread(addr);
-
-	if (pc == addr)
-		fetchc[addr] = 31;
-	else
-		readc[addr] = 31;
-
-	if (addr < 0x7000) {
-	  return ram[addr];
-	} else if (addr >= 0xf000) {
-	  return akernel_ptr[addr & 0x0FFF];
-	}
-
-	if (!bbcmode)
-	{
-		switch (addr & 0xFC00)
-		{
-		case 0x0000:         /*Block zero RAM*/
-			return ram[addr];
-
-		case 0x0400:						   case 0x0C00:
-		case 0x1000: case 0x1400: case 0x1800: case 0x1C00:
-		case 0x2000: case 0x2400:         /*DOS RAM*/
-		case 0x2800: case 0x2C00:
-		case 0x3000: case 0x3400: case 0x3800: case 0x3C00:
-		case 0x4000: case 0x4400: case 0x4800: case 0x4C00:
-		case 0x5000: case 0x5400: case 0x5800: case 0x5C00:
-		case 0x6000: case 0x6400: case 0x6800: case 0x6C00:
-			return ram[addr];
-		
-		case 0x7000: case 0x7400: case 0x7800: case 0x7C00:
-			if(!ramrom_enable || (RR_enables & RAMROM_FLAG_EXTRAM)==0)
-				return ram[addr];
-
-		case 0x8000: case 0x8400: case 0x8800: case 0x8C00:         /*Video RAM*/
-		case 0x9000: case 0x9400: case 0x9800: case 0x9C00:
-			if (snow && cycles >= 0 && cycles < 32)
-				fetcheddat[31 - cycles] = ram[addr];
-			return ram[addr];
-
-		case 0x0800:
-			if ((addr & 0x0F00) == 0x0A00)	/*FDC*/
-			{
-				if(ramrom_enable && RR_BLKA_enabled())
-					return ram[addr];
-				else
-					return read8271(addr);                  /*FDC*/
-			}
-			else
-				return ram[addr];
-
+        uint8_t temp;
+	switch (addr & 0xFC00)
+        {
 		case 0xB000:         /*8255 PIA*/
 			return read8255(addr);
 
@@ -251,115 +182,22 @@ uint8_t readmeml(uint16_t addr)
 						return 0xBF;
 				}
 			}
-
-		case 0xA000: case 0xA400: case 0xA800: case 0xAC00:         /*Utility ROM*/
-			return utility_ptr[addr & 0x0FFF];
-
-		case 0xC000: case 0xC400: case 0xC800: case 0xCC00:         /*BASIC*/
-			return abasic_ptr[addr & 0x0FFF];
-
-		case 0xD000: case 0xD400: case 0xD800: case 0xDC00:         /*Floating point ROM*/
-			return afloat_ptr[addr & 0x0FFF];
-
-		case 0xE000: case 0xE400: case 0xE800: case 0xEC00:         /*Disc ROM*/
-			return dosrom_ptr[addr & 0x0FFF];
-
-		case 0xF000: case 0xF400: case 0xF800: case 0xFC00:         /*Kernel*/
-			return akernel_ptr[addr & 0x0FFF];
-		}
-	}
-	else
-	{
-		switch (addr & 0xFC00)
-		{
-		case 0x0000: case 0x0400: case 0x0800: case 0x0C00:         /*RAM*/
-		case 0x1000: case 0x1400: case 0x1800: case 0x1C00:
-		case 0x2000: case 0x2400: case 0x2800: case 0x2C00:
-		case 0x3000: case 0x3400: case 0x3800: case 0x3C00:
-			return ram[addr];
-
-		case 0x4000: case 0x4400: case 0x4800: case 0x4C00:         /*Video RAM*/
-		case 0x5000: case 0x5400: case 0x5800: case 0x5C00:
-			if (snow && cycles >= 0 && cycles < 32)
-				fetcheddat[31 - cycles] = ram[addr];
-			return ram[addr + 0x4000];
-
-		case 0x7000:         /*8255 PIA*/
-			return read8255(addr);
-
-		case 0x7800:         /*6522 VIA*/
-			return readvia(addr);
-
-		case 0x8000: case 0x8400: case 0x8800: case 0x8C00:
-		case 0x9000: case 0x9400: case 0x9800: case 0x9C00:
-		case 0xA000: case 0xA400: case 0xA800: case 0xAC00:
-		case 0xB000: case 0xB400: case 0xB800: case 0xBC00:
-			return rom[(addr & 0x3FFF) + ROM_OFS_BBC_BASIC];        /*Not implemented*/
-
-		case 0xF000: case 0xF400: case 0xF800: case 0xFC00:             /*Kernel*/
-			return rom[(addr & 0xFFF) + ROM_OFS_BBC_OS];            /*Not implemented*/
-		}
-	}
-	return 0;
-//        printf("Error : Bad read from %04X\n",addr);
-//        dumpregs();
-//        exit(-1);
+        }
+        return the_cpu->mem[addr]; //
+}
+uint16_t readword_ex(uint16_t addr)
+{
+	return readmem_ex(addr) | (readmem_ex(addr+1)<<8);
 }
 
-void writememl(uint16_t addr, uint8_t val)
+
+void writemem_ex(uint16_t addr, uint8_t val)
 {
-	if (debugon)
-		debugwrite(addr, val);
-	writec[addr] = 31;
-	
-	if (!bbcmode)
+	int c;
+	if (addr<0xB000 || addr>=0xC000) return;
+
+	switch (addr & 0xFC00)
 	{
-		switch (addr & 0xFC00)
-		{
-		case 0x0000:         /*Block zero RAM*/
-			ram[addr] = val;
-			return;
-
-		case 0x0400:						   case 0x0C00:
-		case 0x1000: case 0x1400: case 0x1800: case 0x1C00:
-		case 0x2000: case 0x2400:         /*DOS RAM*/
-		case 0x2800: case 0x2C00:
-		case 0x3000: case 0x3400: case 0x3800: case 0x3C00:
-		case 0x4000: case 0x4400: case 0x4800: case 0x4C00:
-		case 0x5000: case 0x5400: case 0x5800: case 0x5C00:
-		case 0x6000: case 0x6400: case 0x6800: case 0x6C00:
-			ram[addr] = val;
-			return;
-
-		case 0x7000: case 0x7400: case 0x7800: case 0x7C00:
-			if(!ramrom_enable || (RR_enables & RAMROM_FLAG_EXTRAM)==0)
-			{
-				ram[addr] = val;
-				return;
-			}
-			
-		case 0x8000: case 0x8400: case 0x8800: case 0x8C00:         /*Video RAM*/
-		case 0x9000: case 0x9400: case 0x9800: case 0x9C00:
-			if (snow && cycles >= 0 && cycles < 32)
-				fetcheddat[31 - cycles] = val;
-			ram[addr] = val;
-			return;
-
-		case 0x0800:
-			if ((addr & 0x0F00) == 0xA00)	/*FDC*/
-			{
-				if(ramrom_enable && RR_BLKA_enabled())
-					ram[addr]=val;
-				else
-					write8271(addr, val); 
-				
-				return;
-			}   
-			else
-				ram[addr]=val;
-                                                      
-			return;
-			
 		case 0xB000:         /*8255 PIA*/
 			write8255(addr, val);
 			return;
@@ -399,1737 +237,923 @@ void writememl(uint16_t addr, uint8_t val)
 						break;
 				}
 			}
-		
-
-		case 0xA000: case 0xA400: case 0xA800: case 0xAC00:             /*Utility ROM*/
-			// Special case of RAM mapped into utility rom space and rom bank 0 selected
-			if(ramrom_enable && (RR_enables & RAMROM_FLAG_EXTRAM) && (RR_bankreg==0))
-				utility_ptr[addr & 0x0FFF]=val;
-			break;
-			
-		case 0xC000: case 0xC400: case 0xC800: case 0xCC00:             /*BASIC*/
-		case 0xD000: case 0xD400: case 0xD800: case 0xDC00:             /*Floating point ROM*/
-		case 0xE000: case 0xE400: case 0xE800: case 0xEC00:             /*Disc ROM*/
-		case 0xF000: case 0xF400: case 0xF800: case 0xFC00:             /*Kernel*/
-
-			return;
-		}
 	}
-	else
-	{
-		switch (addr & 0xFC00)
-		{
-		case 0x0000: case 0x0400: case 0x0800: case 0x0C00:         /*RAM*/
-		case 0x1000: case 0x1400: case 0x1800: case 0x1C00:
-		case 0x2000: case 0x2400: case 0x2800: case 0x2C00:
-		case 0x3000: case 0x3400: case 0x3800: case 0x3C00:
-			ram[addr] = val;
-			return;
-
-		case 0x4000: case 0x4400: case 0x4800: case 0x4C00:         /*Video RAM*/
-		case 0x5000: case 0x5400: case 0x5800: case 0x5C00:
-			if (snow && cycles >= 0 && cycles < 32)
-				fetcheddat[31 - cycles] = val;
-			ram[addr + 0x4000] = val;
-			return;
-
-		case 0x7000:         /*8255 PIA*/
-			write8255(addr, val);
-			return;
-
-		case 0x7800:         /*6522 VIA - not emulated*/
-			writevia(addr, val);
-			return;
-
-		case 0x8000: case 0x8400: case 0x8800: case 0x8C00:
-		case 0x9000: case 0x9400: case 0x9800: case 0x9C00:
-		case 0xA000: case 0xA400: case 0xA800: case 0xAC00:
-		case 0xB000: case 0xB400: case 0xB800: case 0xBC00:
-			return;
-
-		case 0xF000: case 0xF400: case 0xF800: case 0xFC00:         /*Kernel*/
-			return;
-		}
-	}
-	return;
-//        printf("Error : Bad write to %04X data %02X\n",addr,val);
-//        dumpregs();
-//        exit(-1);
 }
 
-
-#define readmem(a) readmeml(a)
-#define writemem(a, v) writememl(a, v)
-//#define readmem(a) ((memstat[(a)>>8]==2)?readmeml(a):mem[(a)>>8][(a)&0xFF])
-//#define writemem(a,b) if (memstat[(a)>>8]==0) mem[(a)>>8][(a)&0xFF]=b; else if (memstat[(a)>>8]==2) writememl(a,b,lines);
-inline uint16_t getsw()
-{
-	uint16_t temp = readmem(pc); pc++;
-
-	temp |= (readmem(pc) << 8); pc++;
-	return temp;
-}
-#define getw() getsw()
-//#define getw() (readmem(pc)|(readmem(pc+1)<<8)); pc+=2
 
 void reset6502()
 {
-//        atexit(dumpram);
-	reset_rom();
-	pc = readmem(0xFFFC) | (readmem(0xFFFD) << 8);
-	p.i = 1;
-	nmi = oldnmi = nmilock = 0;
-}
-
-void dumpregs()
-{
-	dumpram();
-	printf("6502 registers :\n");
-	printf("A=%02X X=%02X Y=%02X S=01%02X PC=%04X\n", a, x, y, s, pc);
-	printf("Status : %c%c%c%c%c%c\n", (p.n) ? 'N' : ' ', (p.v) ? 'V' : ' ', (p.d) ? 'D' : ' ', (p.i) ? 'I' : ' ', (p.z) ? 'Z' : ' ', (p.c) ? 'C' : ' ');
-}
-
-#define setzn(v) p.z = !(v); p.n = (v) & 0x80
-
-#define push(v) ram[0x100 + (s--)] = v
-#define pull()  ram[0x100 + (++s)]
-
-#define polltime(c) { cycles -= c; tapecyc -= (c << 2); if (tapecyc < 0) polltape(); totcyc += c; via.t1c -= c; if (!(via.acr & 0x20)) via.t2c -= c; if (via.t1c < -1 || via.t2c < -1) updatetimers(); }
-
-//#define polltime(c) { cycles -= c; }
-
-
-/*ADC/SBC temp variables*/
-uint16_t tempw;
-int tempv, hc, al, ah;
-uint8_t tempb;
-
-#define ADC(temp)       if (!p.d)			     \
-	{				   \
-		tempw = (a + temp + (p.c ? 1 : 0));	   \
-		p.v = (!((a ^ temp) & 0x80) && ((a ^ tempw) & 0x80));  \
-		a = tempw & 0xFF;		   \
-		p.c = tempw & 0x100;		      \
-		setzn(a);		   \
-	}				   \
-	else				   \
-	{				   \
-		ah = 0;	       \
-		tempb = a + temp + (p.c ? 1 : 0);			     \
-		if (!tempb)					 \
-			p.z = 1;					  \
-		al = (a & 0xF) + (temp & 0xF) + (p.c ? 1 : 0);				  \
-		if (al > 9)					   \
-		{						 \
-			al -= 10;				   \
-			al &= 0xF;				   \
-			ah = 1;					   \
-		}						 \
-		ah += ((a >> 4) + (temp >> 4));				    \
-		if (ah & 8) p.n = 1;				       \
-		p.v = (((ah << 4) ^ a) & 128) && !((a ^ temp) & 128);	\
-		p.c = 0;					     \
-		if (ah > 9)					   \
-		{						 \
-			p.c = 1;				     \
-			ah -= 10;				   \
-			ah &= 0xF;				   \
-		}						 \
-		a = (al & 0xF) | (ah << 4);				 \
-	}
-
-#define SBC(temp)       if (!p.d)			     \
-	{				   \
-		tempw = a - (temp + (p.c ? 0 : 1));    \
-		tempv = (int16_t)a - (int16_t)(temp + (p.c ? 0 : 1));		 \
-		p.v = ((a ^ (temp + (p.c ? 0 : 1))) & (a ^ (int16_t)tempv) & 0x80); \
-		p.c = tempv >= 0; \
-		a = tempw & 0xFF;	       \
-		setzn(a);		   \
-	}				   \
-	else				   \
-	{				   \
-		hc = 0;				      \
-		p.z = p.n = 0;				  \
-		if (!((a - temp) - ((p.c) ? 0 : 1)))		\
-			p.z = 1;			     \
-		al = (a & 15) - (temp & 15) - ((p.c) ? 0 : 1);	    \
-		if (al & 16)			       \
-		{				    \
-			al -= 6;		      \
-			al &= 0xF;		      \
-			hc = 1;			      \
-		}				    \
-		ah = (a >> 4) - (temp >> 4);		    \
-		if (hc) ah--;			    \
-		if ((a - (temp + ((p.c) ? 0 : 1))) & 0x80)	  \
-			p.n = 1;			     \
-		p.v = (((a - (temp + ((p.c) ? 0 : 1))) ^ temp) & 128) && ((a ^ temp) & 128); \
-		p.c = 1; \
-		if (ah & 16)			       \
-		{				    \
-			p.c = 0; \
-			ah -= 6;		      \
-			ah &= 0xF;		      \
-		}				    \
-		a = (al & 0xF) | ((ah & 0xF) << 4);		    \
-	}
-
-int lns;
-uint8_t opcode;
-void exec6502(int linenum, int cpl, int execute, int update)
-{
-	uint16_t addr;
-	uint8_t temp;
-	int tempi;
-	int8_t offset;
 	int c;
-	int lines;
-	int oldcyc;
-
-	for (lines = 0; lines < linenum; lines++)
-	{
-//                rpclog("Exec line %i\n",lines);
-		lns = lines;
-		if (update && (lines < 262 || lines == 311)) {
-		  drawline(lines);
-		}
-		
-		if (execute) {
-		  pollsound();
-		cycles += cpl;
-//                badline=0;
-		while (cycles > 0)
-		{
-			oldcyc = cycles;
-			if (skipint == 1)
-				skipint = 0;
-			if (debugon)
-				dodebugger();
-			opcode = readmem(pc); pc++;
-			switch (opcode)
-			{
-			case 0x00:         /*BRK*/
-/*                                printf("BRK at %04X\n",pc);
-                                dumpregs();
-                                dumpram();
-                                exit(-1);*/
-				pc++;
-				push(pc >> 8);
-				push(pc & 0xFF);
-				temp = 0x30;
-				if (p.c)
-					temp |= 1;
-				if (p.z)
-					temp |= 2;
-				if (p.d)
-					temp |= 8;
-				if (p.v)
-					temp |= 0x40;
-				if (p.n)
-					temp |= 0x80;
-				push(temp);
-				pc = readmem(0xFFFE) | (readmem(0xFFFF) << 8);
-				p.i = 1;
-				polltime(7);
-				break;
-
-			case 0x01:         /*ORA (,x)*/
-				temp = readmem(pc) + x; pc++;
-				addr = readmem(temp) | (readmem(temp + 1) << 8);
-				a |= readmem(addr);
-				setzn(a);
-				polltime(6);
-				break;
-
-			case 0x05:         /*ORA zp*/
-				addr = readmem(pc); pc++;
-				a |= readmem(addr);
-				setzn(a);
-				polltime(3);
-				break;
-
-			case 0x06:         /*ASL zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				p.c = temp & 0x80;
-				temp <<= 1;
-				setzn(temp);
-				writemem(addr, temp);
-				polltime(5);
-				break;
-
-			case 0x08:         /*PHP*/
-				temp = 0x30;
-				if (p.c)
-					temp |= 1;
-				if (p.z)
-					temp |= 2;
-				if (p.i)
-					temp |= 4;
-				if (p.d)
-					temp |= 8;
-				if (p.v)
-					temp |= 0x40;
-				if (p.n)
-					temp |= 0x80;
-				push(temp);
-				polltime(3);
-				break;
-
-			case 0x09:         /*ORA imm*/
-				a |= readmem(pc); pc++;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x0A:         /*ASL A*/
-				p.c = a & 0x80;
-				a <<= 1;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x0B:         /*ANC imm*/
-				a &= readmem(pc); pc++;
-				setzn(a);
-				p.c = p.n;
-				polltime(2);
-				break;
-
-			case 0x0D:         /*ORA abs*/
-				addr = getw();
-				a |= readmem(addr);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x0E:         /*ASL abs*/
-				addr = getw();
-				temp = readmem(addr);
-				p.c = temp & 0x80;
-				temp <<= 1;
-				setzn(temp);
-				writemem(addr, temp);
-				polltime(6);
-				break;
-
-			case 0x10:         /*BPL*/
-				offset = (int8_t)readmem(pc); pc++;
-				temp = 2;
-				if (!p.n)
-				{
-					temp++;
-					if ((pc & 0xFF00) ^ ((pc + offset) & 0xFF00))
-						temp++;
-					pc += offset;
-				}
-				polltime(temp);
-				break;
-
-			case 0x11:         /*ORA (),y*/
-				temp = readmem(pc); pc++;
-				addr = readmem(temp) + (readmem(temp + 1) << 8);
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				a |= readmem(addr + y);
-				setzn(a);
-				polltime(5);
-				break;
-
-			case 0x15:         /*ORA zp,x*/
-				addr = readmem(pc); pc++;
-				a |= ram[(addr + x) & 0xFF];
-				setzn(a);
-				polltime(3);
-				break;
-
-			case 0x16:         /*ASL zp,x*/
-				addr = (readmem(pc) + x) & 0xFF; pc++;
-				temp = ram[addr];
-				p.c = temp & 0x80;
-				temp <<= 1;
-				setzn(temp);
-				ram[addr] = temp;
-				polltime(5);
-				break;
-
-			case 0x18:         /*CLC*/
-				p.c = 0;
-				polltime(2);
-				break;
-
-			case 0x19:         /*ORA abs,y*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				a |= readmem(addr + y);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x1D:         /*ORA abs,x*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + x) & 0xFF00))
-					polltime(1);
-				addr += x;
-				a |= readmem(addr);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x1E:         /*ASL abs,x*/
-				addr = getw(); addr += x;
-				temp = readmem(addr);
-				p.c = temp & 0x80;
-				temp <<= 1;
-				writemem(addr, temp);
-				setzn(temp);
-				polltime(7);
-				break;
-
-			case 0x20:         /*JSR*/
-				addr = getw(); pc--;
-				push(pc >> 8);
-				push(pc);
-				pc = addr;
-				polltime(6);
-				break;
-
-			case 0x21:         /*AND (,x)*/
-				temp = readmem(pc) + x; pc++;
-				addr = readmem(temp) | (readmem(temp + 1) << 8);
-				a &= readmem(addr);
-				setzn(a);
-				polltime(6);
-				break;
-
-			case 0x24:         /*BIT zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				p.z = !(a & temp);
-				p.v = temp & 0x40;
-				p.n = temp & 0x80;
-				polltime(3);
-				break;
-
-			case 0x25:         /*AND zp*/
-				addr = readmem(pc); pc++;
-				a &= readmem(addr);
-				setzn(a);
-				polltime(3);
-				break;
-
-			case 0x26:         /*ROL zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				tempi = p.c;
-				p.c = temp & 0x80;
-				temp <<= 1;
-				if (tempi)
-					temp |= 1;
-				setzn(temp);
-				writemem(addr, temp);
-				polltime(5);
-				break;
-
-			case 0x28:         /*PLP*/
-				temp = pull();
-				p.c = temp & 1; p.z = temp & 2;
-				p.i = temp & 4; p.d = temp & 8;
-				p.v = temp & 0x40; p.n = temp & 0x80;
-				polltime(4);
-				break;
-
-			case 0x29:         /*AND*/
-				a &= readmem(pc); pc++;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x2A:         /*ROL A*/
-				tempi = p.c;
-				p.c = a & 0x80;
-				a <<= 1;
-				if (tempi)
-					a |= 1;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x2C:         /*BIT abs*/
-				addr = getw();
-				temp = readmem(addr);
-				p.z = !(a & temp);
-				p.v = temp & 0x40;
-				p.n = temp & 0x80;
-				polltime(4);
-				break;
-
-			case 0x2D:         /*AND abs*/
-				addr = getw();
-				a &= readmem(addr);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x2E:         /*ROL abs*/
-				addr = getw();
-				temp = readmem(addr);
-				tempi = p.c;
-				p.c = temp & 0x80;
-				temp <<= 1;
-				if (tempi)
-					temp |= 1;
-				writemem(addr, temp);
-				setzn(temp);
-				polltime(6);
-				break;
-
-			case 0x30:         /*BMI*/
-				offset = (int8_t)readmem(pc); pc++;
-				temp = 2;
-				if (p.n)
-				{
-					temp++;
-					if ((pc & 0xFF00) ^ ((pc + offset) & 0xFF00))
-						temp++;
-					pc += offset;
-				}
-				polltime(temp);
-				break;
-
-			case 0x31:         /*AND (),y*/
-				temp = readmem(pc); pc++;
-				addr = readmem(temp) + (readmem(temp + 1) << 8);
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				a &= readmem(addr + y);
-				setzn(a);
-				polltime(5);
-				break;
-
-			case 0x35:         /*AND zp,x*/
-				addr = readmem(pc); pc++;
-				a &= ram[(addr + x) & 0xFF];
-				setzn(a);
-				polltime(3);
-				break;
-
-			case 0x36:         /*ROL zp,x*/
-				addr = readmem(pc); pc++;
-				addr += x; addr &= 0xFF;
-				temp = ram[addr];
-				tempi = p.c;
-				p.c = temp & 0x80;
-				temp <<= 1;
-				if (tempi)
-					temp |= 1;
-				setzn(temp);
-				ram[addr] = temp;
-				polltime(5);
-				break;
-
-			case 0x38:         /*SEC*/
-				p.c = 1;
-				polltime(2);
-				break;
-
-			case 0x39:         /*AND abs,y*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				a &= readmem(addr + y);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x3D:         /*AND abs,x*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + x) & 0xFF00))
-					polltime(1);
-				addr += x;
-				a &= readmem(addr);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x3E:         /*ROL abs,x*/
-				addr = getw(); addr += x;
-				temp = readmem(addr);
-				tempi = p.c;
-				p.c = temp & 0x80;
-				temp <<= 1;
-				if (tempi)
-					temp |= 1;
-				writemem(addr, temp);
-				setzn(temp);
-				polltime(7);
-				break;
-
-			case 0x40:         /*RTI*/
-//                                output=0;
-				temp = pull();
-				p.c = temp & 1; p.z = temp & 2;
-				p.i = temp & 4; p.d = temp & 8;
-				p.v = temp & 0x40; p.n = temp & 0x80;
-				pc = pull();
-				pc |= (pull() << 8);
-				polltime(6);
-				nmilock = 0;
-				break;
-
-			case 0x41:         /*EOR (,x)*/
-				temp = readmem(pc) + x; pc++;
-				addr = readmem(temp) | (readmem(temp + 1) << 8);
-				a ^= readmem(addr);
-				setzn(a);
-				polltime(6);
-				break;
-
-			case 0x45:         /*EOR zp*/
-				addr = readmem(pc); pc++;
-				a ^= readmem(addr);
-				setzn(a);
-				polltime(3);
-				break;
-
-			case 0x46:         /*LSR zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				p.c = temp & 1;
-				temp >>= 1;
-				setzn(temp);
-				writemem(addr, temp);
-				polltime(5);
-				break;
-
-			case 0x48:         /*PHA*/
-				push(a);
-				polltime(3);
-				break;
-
-			case 0x49:         /*EOR*/
-				a ^= readmem(pc); pc++;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x4A:         /*LSR A*/
-				p.c = a & 1;
-				a >>= 1;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x4C:         /*JMP*/
-				addr = getw();
-				pc = addr;
-				polltime(3);
-				break;
-
-			case 0x4D:         /*EOR abs*/
-				addr = getw();
-				a ^= readmem(addr);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x4E:         /*LSR abs*/
-				addr = getw();
-				polltime(4);
-				temp = readmem(addr);
-				polltime(1);
-				writemem(addr, temp);
-				polltime(1);
-				p.c = temp & 1;
-				temp >>= 1;
-				setzn(temp);
-				writemem(addr, temp);
-				polltime(6);
-				break;
-
-			case 0x50:         /*BVC*/
-				offset = (int8_t)readmem(pc); pc++;
-				temp = 2;
-				if (!p.v)
-				{
-					temp++;
-					if ((pc & 0xFF00) ^ ((pc + offset) & 0xFF00))
-						temp++;
-					pc += offset;
-				}
-				polltime(temp);
-				break;
-
-			case 0x51:         /*EOR (),y*/
-				temp = readmem(pc); pc++;
-				addr = readmem(temp) + (readmem(temp + 1) << 8);
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				a ^= readmem(addr + y);
-				setzn(a);
-				polltime(5);
-				break;
-
-			case 0x55:         /*EOR zp,x*/
-				addr = readmem(pc); pc++;
-				a ^= ram[(addr + x) & 0xFF];
-				setzn(a);
-				polltime(3);
-				break;
-
-			case 0x56:         /*LSR zp,x*/
-				addr = (readmem(pc) + x) & 0xFF; pc++;
-				temp = ram[addr];
-				p.c = temp & 1;
-				temp >>= 1;
-				setzn(temp);
-				ram[addr] = temp;
-				polltime(5);
-				break;
-
-			case 0x58:         /*CLI*/
-//                                if (pc<0x8000) printf("CLI at %04X\n",pc);
-				p.i = 0;
-				skipint = 1;
-				polltime(2);
-				break;
-
-			case 0x59:         /*EOR abs,y*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				a ^= readmem(addr + y);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x5D:         /*EOR abs,x*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + x) & 0xFF00))
-					polltime(1);
-				addr += x;
-				a ^= readmem(addr);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x5E:         /*LSR abs,x*/
-				addr = getw(); addr += x;
-				temp = readmem(addr);
-				p.c = temp & 1;
-				temp >>= 1;
-				writemem(addr, temp);
-				setzn(temp);
-				polltime(7);
-				break;
-
-			case 0x60:         /*RTS*/
-				pc = pull();
-				pc |= (pull() << 8);
-				pc++;
-				polltime(6);
-				break;
-
-			case 0x61:         /*ADC (,x)*/
-				temp = readmem(pc) + x; pc++;
-				addr = readmem(temp) | (readmem(temp + 1) << 8);
-				temp = readmem(addr);
-				ADC(temp);
-				polltime(6);
-				break;
-
-			case 0x65:         /*ADC zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				ADC(temp);
-				polltime(3);
-				break;
-
-			case 0x66:         /*ROR zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				tempi = p.c;
-				p.c = temp & 1;
-				temp >>= 1;
-				if (tempi)
-					temp |= 0x80;
-				setzn(temp);
-				writemem(addr, temp);
-				polltime(5);
-				break;
-
-			case 0x68:         /*PLA*/
-				a = pull();
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0x69:         /*ADC imm*/
-				temp = readmem(pc); pc++;
-				ADC(temp);
-				polltime(2);
-				break;
-
-			case 0x6A:         /*ROR A*/
-				tempi = p.c;
-				p.c = a & 1;
-				a >>= 1;
-				if (tempi)
-					a |= 0x80;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x6C:         /*JMP ()*/
-				addr = getw();
-				if ((addr & 0xFF) == 0xFF)
-					pc = readmem(addr) | (readmem(addr - 0xFF) << 8);
-				else
-					pc = readmem(addr) | (readmem(addr + 1) << 8);
-				polltime(5);
-				break;
-
-			case 0x6D:         /*ADC abs*/
-				addr = getw();
-				temp = readmem(addr);
-				ADC(temp);
-				polltime(4);
-				break;
-
-			case 0x6E:         /*ROR abs*/
-				addr = getw();
-				polltime(4);
-				temp = readmem(addr);
-				polltime(1);
-				writemem(addr, temp);
-				polltime(1);
-				tempi = p.c;
-				p.c = temp & 1;
-				temp >>= 1;
-				if (tempi)
-					temp |= 0x80;
-				setzn(temp);
-				writemem(addr, temp);
-				break;
-
-			case 0x70:         /*BVS*/
-				offset = (int8_t)readmem(pc); pc++;
-				temp = 2;
-				if (p.v)
-				{
-					temp++;
-					if ((pc & 0xFF00) ^ ((pc + offset) & 0xFF00))
-						temp++;
-					pc += offset;
-				}
-				polltime(temp);
-				break;
-
-			case 0x71:         /*ADC (),y*/
-				temp = readmem(pc); pc++;
-				addr = readmem(temp) + (readmem(temp + 1) << 8);
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				temp = readmem(addr + y);
-				ADC(temp);
-				polltime(5);
-				break;
-
-			case 0x75:         /*ADC zp,x*/
-				addr = readmem(pc); pc++;
-				temp = ram[(addr + x) & 0xFF];
-				ADC(temp);
-				polltime(4);
-				break;
-
-			case 0x76:         /*ROR zp,x*/
-				addr = readmem(pc); pc++;
-				addr += x; addr &= 0xFF;
-				temp = ram[addr];
-				tempi = p.c;
-				p.c = temp & 1;
-				temp >>= 1;
-				if (tempi)
-					temp |= 0x80;
-				setzn(temp);
-				ram[addr] = temp;
-				polltime(5);
-				break;
-
-			case 0x78:         /*SEI*/
-//                                if (pc<0x8000) printf("SEI at %04X\n",pc);
-				p.i = 1;
-				polltime(2);
-//                                if (output2) printf("SEI at line %i %04X %02X %02X\n",lines,pc,ram[0x103+s],ram[0x104+s]);
-				break;
-
-			case 0x79:         /*ADC abs,y*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				temp = readmem(addr + y);
-				ADC(temp);
-				polltime(4);
-				break;
-
-			case 0x7D:         /*ADC abs,x*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + x) & 0xFF00))
-					polltime(1);
-				addr += x;
-				temp = readmem(addr);
-				ADC(temp);
-				polltime(4);
-				break;
-
-			case 0x7E:         /*ROR abs,x*/
-				addr = getw(); addr += x;
-				temp = readmem(addr);
-				tempi = p.c;
-				p.c = temp & 1;
-				temp >>= 1;
-				if (tempi)
-					temp |= 0x80;
-				writemem(addr, temp);
-				setzn(temp);
-				polltime(7);
-				break;
-
-			case 0x81:         /*STA (,x)*/
-				temp = readmem(pc) + x; pc++;
-				addr = readmem(temp) | (readmem(temp + 1) << 8);
-				writemem(addr, a);
-				polltime(6);
-				break;
-
-			case 0x84:         /*STY zp*/
-				addr = readmem(pc); pc++;
-				writemem(addr, y);
-				polltime(3);
-				break;
-
-			case 0x85:         /*STA zp*/
-				addr = readmem(pc); pc++;
-				writemem(addr, a);
-				polltime(3);
-				break;
-
-			case 0x86:         /*STX zp*/
-				addr = readmem(pc); pc++;
-				writemem(addr, x);
-				polltime(3);
-				break;
-
-			case 0x88:         /*DEY*/
-				y--;
-				setzn(y);
-				polltime(2);
-				break;
-
-			case 0x8A:         /*TXA*/
-				a = x;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x8C:         /*STY abs*/
-				addr = getw();
-				polltime(3);
-				writemem(addr, y);
-				polltime(1);
-				break;
-
-			case 0x8D:         /*STA abs*/
-				addr = getw();
-				polltime(3);
-				writemem(addr, a);
-				polltime(1);
-				break;
-
-			case 0x8E:         /*STX abs*/
-				addr = getw();
-				polltime(3);
-				writemem(addr, x);
-				polltime(1);
-				break;
-
-			case 0x90:         /*BCC*/
-				offset = (int8_t)readmem(pc); pc++;
-				temp = 2;
-				if (!p.c)
-				{
-					temp++;
-					if ((pc & 0xFF00) ^ ((pc + offset) & 0xFF00))
-						temp++;
-					pc += offset;
-				}
-				polltime(temp);
-				break;
-
-			case 0x91:         /*STA (),y*/
-				temp = readmem(pc); pc++;
-				addr = readmem(temp) + (readmem(temp + 1) << 8) + y;
-				writemem(addr, a);
-				polltime(6);
-				break;
-
-			case 0x94:         /*STY zp,x*/
-				addr = readmem(pc); pc++;
-				ram[(addr + x) & 0xFF] = y;
-				polltime(4);
-				break;
-
-			case 0x95:         /*STA zp,x*/
-				addr = readmem(pc); pc++;
-				writemem((addr + x) & 0xFF, a);
-//                                ram[(addr+x)&0xFF]=a;
-				polltime(4);
-				break;
-
-			case 0x96:         /*STX zp,y*/
-				addr = readmem(pc); pc++;
-				ram[(addr + y) & 0xFF] = x;
-				polltime(4);
-				break;
-
-			case 0x98:         /*TYA*/
-				a = y;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x99:         /*STA abs,y*/
-				addr = getw();
-				polltime(4);
-				writemem(addr + y, a);
-				polltime(1);
-				break;
-
-			case 0x9A:         /*TXS*/
-				s = x;
-				polltime(2);
-				break;
-
-			case 0x9D:         /*STA abs,x*/
-				addr = getw();
-				polltime(4);
-				writemem(addr + x, a);
-				polltime(1);
-				break;
-
-			case 0xA0:         /*LDY imm*/
-				y = readmem(pc); pc++;
-				setzn(y);
-				polltime(2);
-				break;
-
-			case 0xA1:         /*LDA (,x)*/
-				temp = readmem(pc) + x; pc++;
-				addr = readmem(temp) | (readmem(temp + 1) << 8);
-				a = readmem(addr);
-				setzn(a);
-				polltime(6);
-				break;
-
-			case 0xA2:         /*LDX imm*/
-				x = readmem(pc); pc++;
-				setzn(x);
-				polltime(2);
-				break;
-
-			case 0xA4:         /*LDY zp*/
-				addr = readmem(pc); pc++;
-				y = readmem(addr);
-				setzn(y);
-				polltime(3);
-				break;
-
-			case 0xA5:         /*LDA zp*/
-				addr = readmem(pc); pc++;
-				a = readmem(addr);
-				setzn(a);
-				polltime(3);
-				break;
-
-			case 0xA6:         /*LDX zp*/
-				addr = readmem(pc); pc++;
-				x = readmem(addr);
-				setzn(x);
-				polltime(3);
-				break;
-
-			case 0xA8:         /*TAY*/
-				y = a;
-				setzn(y);
-				break;
-
-			case 0xA9:         /*LDA imm*/
-				a = readmem(pc); pc++;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0xAA:         /*TAX*/
-				x = a;
-				setzn(x);
-				polltime(2);
-				break;
-
-			case 0xAC:         /*LDY abs*/
-				addr = getw();
-				polltime(3);
-				y = readmem(addr);
-				setzn(y);
-				polltime(1);
-				break;
-
-			case 0xAD:         /*LDA abs*/
-				addr = getw();
-				polltime(3);
-				a = readmem(addr);
-				setzn(a);
-				polltime(1);
-				break;
-
-			case 0xAE:         /*LDX abs*/
-				addr = getw();
-				polltime(3);
-				x = readmem(addr);
-				setzn(x);
-				polltime(1);
-				break;
-
-			case 0xB0:         /*BCS*/
-				offset = (int8_t)readmem(pc); pc++;
-				temp = 2;
-				if (p.c)
-				{
-					temp++;
-					if ((pc & 0xFF00) ^ ((pc + offset) & 0xFF00))
-						temp++;
-					pc += offset;
-				}
-				polltime(temp);
-				break;
-
-			case 0xB1:         /*LDA (),y*/
-				temp = readmem(pc); pc++;
-				addr = readmem(temp) + (readmem(temp + 1) << 8);
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				a = readmem(addr + y);
-				setzn(a);
-				polltime(5);
-				break;
-
-			case 0xB4:         /*LDY zp,x*/
-				addr = readmem(pc); pc++;
-				y = ram[(addr + x) & 0xFF];
-				setzn(y);
-				polltime(3);
-				break;
-
-			case 0xB5:         /*LDA zp,x*/
-				addr = readmem(pc); pc++;
-				a = ram[(addr + x) & 0xFF];
-				setzn(a);
-				polltime(3);
-				break;
-
-			case 0xB6:         /*LDX zp,y*/
-				addr = readmem(pc); pc++;
-				x = ram[(addr + y) & 0xFF];
-				setzn(x);
-				polltime(3);
-				break;
-
-			case 0xB8:         /*CLV*/
-				p.v = 0;
-				polltime(2);
-				break;
-
-			case 0xB9:         /*LDA abs,y*/
-				addr = getw();
-				polltime(3);
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				a = readmem(addr + y);
-				setzn(a);
-				polltime(1);
-				break;
-
-			case 0xBA:         /*TSX*/
-				x = s;
-				setzn(x);
-				polltime(2);
-				break;
-
-			case 0xBC:         /*LDY abs,x*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + x) & 0xFF00))
-					polltime(1);
-				y = readmem(addr + x);
-				setzn(y);
-				polltime(4);
-				break;
-
-			case 0xBD:         /*LDA abs,x*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + x) & 0xFF00))
-					polltime(1);
-				a = readmem(addr + x);
-				setzn(a);
-				polltime(4);
-				break;
-
-			case 0xBE:         /*LDX abs,y*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				x = readmem(addr + y);
-				setzn(x);
-				polltime(4);
-				break;
-
-			case 0xC0:         /*CPY imm*/
-				temp = readmem(pc); pc++;
-				setzn(y - temp);
-				p.c = (y >= temp);
-				polltime(2);
-				break;
-
-			case 0xC1:         /*CMP (,x)*/
-				temp = readmem(pc) + x; pc++;
-				addr = readmem(temp) | (readmem(temp + 1) << 8);
-				temp = readmem(addr);
-				setzn(a - temp);
-				p.c = (a >= temp);
-				polltime(6);
-				break;
-
-			case 0xC4:         /*CPY zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				setzn(y - temp);
-				p.c = (y >= temp);
-				polltime(3);
-				break;
-
-			case 0xC5:         /*CMP zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				setzn(a - temp);
-				p.c = (a >= temp);
-				polltime(3);
-				break;
-
-			case 0xC6:         /*DEC zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr) - 1;
-				writemem(addr, temp);
-				setzn(temp);
-				polltime(5);
-				break;
-
-			case 0xC8:         /*INY*/
-				y++;
-				setzn(y);
-				polltime(2);
-				break;
-
-			case 0xC9:         /*CMP imm*/
-				temp = readmem(pc); pc++;
-				setzn(a - temp);
-				p.c = (a >= temp);
-				polltime(2);
-				break;
-
-			case 0xCA:         /*DEX*/
-				x--;
-				setzn(x);
-				polltime(2);
-				break;
-
-			case 0xCC:         /*CPY abs*/
-				addr = getw();
-				temp = readmem(addr);
-				setzn(y - temp);
-				p.c = (y >= temp);
-				polltime(4);
-				break;
-
-			case 0xCD:         /*CMP abs*/
-				addr = getw();
-				temp = readmem(addr);
-				setzn(a - temp);
-				p.c = (a >= temp);
-				polltime(4);
-				break;
-
-			case 0xCE:         /*DEC abs*/
-				addr = getw();
-				polltime(4);
-				temp = readmem(addr) - 1;
-				polltime(1);
-				writemem(addr, temp + 1);
-				polltime(1);
-				writemem(addr, temp);
-				setzn(temp);
-				break;
-
-			case 0xD0:         /*BNE*/
-				offset = (int8_t)readmem(pc); pc++;
-				temp = 2;
-				if (!p.z)
-				{
-					temp++;
-					if ((pc & 0xFF00) ^ ((pc + offset) & 0xFF00))
-						temp++;
-					pc += offset;
-				}
-				polltime(temp);
-				break;
-
-			case 0xD1:         /*CMP (),y*/
-				temp = readmem(pc); pc++;
-				addr = readmem(temp) + (readmem(temp + 1) << 8);
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				temp = readmem(addr + y);
-				setzn(a - temp);
-				p.c = (a >= temp);
-				polltime(5);
-				break;
-
-			case 0xD5:         /*CMP zp,x*/
-				addr = readmem(pc); pc++;
-				temp = ram[(addr + x) & 0xFF];
-				setzn(a - temp);
-				p.c = (a >= temp);
-				polltime(3);
-				break;
-
-			case 0xD6:         /*DEC zp,x*/
-				addr = readmem(pc); pc++;
-				ram[(addr + x) & 0xFF]--;
-				setzn(ram[(addr + x) & 0xFF]);
-				polltime(5);
-				break;
-
-			case 0xD8:         /*CLD*/
-				p.d = 0;
-				polltime(2);
-				break;
-
-			case 0xD9:         /*CMP abs,y*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				temp = readmem(addr + y);
-				setzn(a - temp);
-				p.c = (a >= temp);
-				polltime(4);
-				break;
-
-			case 0xDD:         /*CMP abs,x*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + x) & 0xFF00))
-					polltime(1);
-				temp = readmem(addr + x);
-				setzn(a - temp);
-				p.c = (a >= temp);
-				polltime(4);
-				break;
-
-			case 0xDE:         /*DEC abs,x*/
-				addr = getw(); addr += x;
-				temp = readmem(addr) - 1;
-				writemem(addr, temp);
-				setzn(temp);
-				polltime(6);
-				break;
-
-			case 0xE0:         /*CPX imm*/
-				temp = readmem(pc); pc++;
-				setzn(x - temp);
-				p.c = (x >= temp);
-				polltime(3);
-				break;
-
-			case 0xE4:         /*CPX zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				setzn(x - temp);
-				p.c = (x >= temp);
-				polltime(3);
-				break;
-
-			case 0xE5:         /*SBC zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr);
-				SBC(temp);
-				polltime(3);
-				break;
-
-			case 0xE6:         /*INC zp*/
-				addr = readmem(pc); pc++;
-				temp = readmem(addr) + 1;
-				writemem(addr, temp);
-				setzn(temp);
-				polltime(5);
-				break;
-
-			case 0xE8:         /*INX*/
-				x++;
-				setzn(x);
-				polltime(2);
-				break;
-
-			case 0xE9:         /*SBC imm*/
-				temp = readmem(pc); pc++;
-				SBC(temp);
-				polltime(2);
-				break;
-
-			case 0xEA:         /*NOP*/
-				polltime(2);
-				break;
-
-			case 0xEC:         /*CPX abs*/
-				addr = getw();
-				temp = readmem(addr);
-				setzn(x - temp);
-				p.c = (x >= temp);
-				polltime(3);
-				break;
-
-			case 0xED:         /*SBC abs*/
-				addr = getw();
-				temp = readmem(addr);
-				SBC(temp);
-				polltime(4);
-				break;
-
-			case 0xEE:         /*DEC abs*/
-				addr = getw();
-				polltime(4);
-				temp = readmem(addr) + 1;
-				polltime(1);
-				writemem(addr, temp - 1);
-				polltime(1);
-				writemem(addr, temp);
-				setzn(temp);
-				break;
-
-			case 0xF0:         /*BEQ*/
-				offset = (int8_t)readmem(pc); pc++;
-				temp = 2;
-				if (p.z)
-				{
-					temp++;
-					if ((pc & 0xFF00) ^ ((pc + offset) & 0xFF00))
-						temp++;
-					pc += offset;
-				}
-				polltime(temp);
-				break;
-
-			case 0xF1:         /*SBC (),y*/
-				temp = readmem(pc); pc++;
-				addr = readmem(temp) + (readmem(temp + 1) << 8);
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				temp = readmem(addr + y);
-				SBC(temp);
-				polltime(5);
-				break;
-
-			case 0xF5:         /*SBC zp,x*/
-				addr = readmem(pc); pc++;
-				temp = ram[(addr + x) & 0xFF];
-				SBC(temp);
-				polltime(3);
-				break;
-
-			case 0xF6:         /*INC zp,x*/
-				addr = readmem(pc); pc++;
-				ram[(addr + x) & 0xFF]++;
-				setzn(ram[(addr + x) & 0xFF]);
-				polltime(5);
-				break;
-
-			case 0xF8:         /*SED*/
-				p.d = 1;
-				polltime(2);
-				break;
-
-			case 0xF9:         /*SBC abs,y*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + y) & 0xFF00))
-					polltime(1);
-				temp = readmem(addr + y);
-				SBC(temp);
-				polltime(4);
-				break;
-
-			case 0xFD:         /*SBC abs,x*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + x) & 0xFF00))
-					polltime(1);
-				temp = readmem(addr + x);
-				SBC(temp);
-				polltime(4);
-				break;
-
-			case 0xFE:         /*INC abs,x*/
-				addr = getw(); addr += x;
-				temp = readmem(addr) + 1;
-				writemem(addr, temp);
-				setzn(temp);
-				polltime(6);
-				break;
-
-			case 0x04:         /*Undocumented - NOP zp*/
-				addr = readmem(pc); pc++;
-				polltime(3);
-				break;
-
-			case 0xF4:         /*Undocumented - NOP zpx*/
-				addr = readmem(pc); pc++;
-				polltime(4);
-				break;
-
-			case 0xA3:         /*Undocumented - LAX (,y)*/
-				temp = readmem(pc) + x; pc++;
-				addr = readmem(temp) | (readmem(temp + 1) << 8);
-				a = x = readmem(addr);
-				setzn(a);
-				polltime(6);
-				break;
-
-			case 0x07:         /*Undocumented - SLO zp*/
-				addr = readmem(pc); pc++;
-				c = ram[addr] & 0x80;
-				ram[addr] <<= 1;
-				a |= ram[addr];
-				setzn(a);
-				polltime(5);
-				break;
-
-			case 0x23:              /*Undocumented - RLA*/
-				break;          /*This was found in Repton 3 and
-				                   looks like a mistake, so I'll
-				                   ignore it for now*/
-
-			case 0x2F:              /*Undocumented - RLA abs*/
-				addr = getw();  /*Found in The Hobbit*/
-				temp = readmem(addr);
-				tempi = p.c;
-				p.c = temp & 0x80;
-				temp <<= 1;
-				if (tempi)
-					temp |= 1;
-				writemem(addr, temp);
-				a &= temp;
-				setzn(a);
-				polltime(6);
-				break;
-
-			case 0x4B:         /*Undocumented - ASR*/
-				a &= readmem(pc); pc++;
-				p.c = a & 1;
-				a >>= 1;
-				setzn(a);
-				polltime(2);
-				break;
-
-			case 0x67:         /*Undocumented - RRA zp*/
-				addr = readmem(pc); pc++;
-				ram[addr] >>= 1;
-				if (p.c)
-					ram[addr] |= 1;
-				temp = ram[addr];
-				ADC(temp);
-				polltime(5);
-				break;
-
-			case 0x80:         /*Undocumented - NOP imm*/
-				readmem(pc); pc++;
-				polltime(2);
-				break;
-
-			case 0x87:         /*Undocumented - SAX zp*/
-				addr = readmem(pc); pc++;
-				ram[addr] = a & x;
-				polltime(3);
-				break;
-
-			case 0x9C:         /*Undocumented - SHY abs,x*/
-				addr = getw();
-				writemem(addr + x, y & ((addr >> 8) + 1));
-				polltime(5);
-				break;
-
-			case 0xDA:         /*Undocumented - NOP*/
-//                                case 0xFA:
-				polltime(2);
-				break;
-
-			case 0xDC:         /*Undocumented - NOP abs,x*/
-				addr = getw();
-				if ((addr & 0xFF00) ^ ((addr + x) & 0xFF00))
-					polltime(1);
-				readmem(addr + x);
-				polltime(4);
-				break;
-
-			default:
-				switch (opcode & 0xF)
-				{
-				case 0xA:
-					break;
-				case 0x0:
-				case 0x2:
-				case 0x3:
-				case 0x4:
-				case 0x7:
-				case 0x9:
-				case 0xB:
-					pc++;
-					break;
-				case 0xC:
-				case 0xE:
-				case 0xF:
-					pc += 2;
-					break;
-				}
-			}
-			oldcyc -= cycles;
-/*                        if (!pc)
-                        {
-                                printf("PC at 0\n");
-                                dumpregs();
-                                dumpram();
-                                exit(-1);
-                        }*/
-//                        if (pc==0x8000) a=1;
-			if (pc == 0xC2CF || pc < 0x8000)
-				tapeon = 0;
-			if (pc == 0xFB8E)
-				tapeon = 1;
-/*                        if (pc==0xFC23)
-                        {
-                                rpclog("Cassette byte - %02X %c",a,a);
-                                rpclog("\n");
-                                if (a!=lastdat) rpclog("Doesn't match!\n");
-                        }*/
-/*                        if (pc==0xFC1E) rpclog("COS received %02X %c\n",a,(a&0xE0)?a:a+0x20);
-                        if (pc==0xFBC7) rpclog("Preamble test returned - %i\n",p.c);
-                        if (pc==0xFBD3) rpclog("Finished loading filename - %02X %02X %02X %02X %02X %02X\n",ram[0xED],ram[0xEE],ram[0xEF],ram[0xF0],ram[0xF1],ram[0xF2]);
-                        if (pc==0xFBDB) rpclog("Compare %02X with %02X - %i\n",a,ram[0xED+y],p.z);
-                        if (pc==0xFBE1) rpclog("Filename match\n");
-                        if (pc==0xF9E0) rpclog("Loading block...\n");
-                        if (pc==0xFA07) rpclog("Finished block, %i\n",p.c);*/
-//                        if (pc==0xF172) output=1;
-//                        if (output) rpclog("%02X A=%02X X=%02X Y=%02X PC=%04X %c%c%c%c%c%c %i\n",opcode,a,x,y,pc,(p.n)?'N':' ',(p.v)?'V':' ',(p.d)?'D':' ',(p.i)?'I':' ',(p.z)?'Z':' ',(p.c)?'C':' ',totcyc);
-			ins++;
-/*                        if (timetolive)
-                        {
-                                timetolive--;
-                                if (!timetolive) exit(-1);
-                        }*/
-			if (nmi && !oldnmi)
-			{
-				push(pc >> 8);
-				push(pc & 0xFF);
-				temp = 0x20;
-				if (p.c)
-					temp |= 1;
-				if (p.z)
-					temp |= 2;
-				if (p.i)
-					temp |= 4;
-				if (p.d)
-					temp |= 8;
-				if (p.v)
-					temp |= 0x40;
-				if (p.n)
-					temp |= 0x80;
-				push(temp);
-				pc = readmem(0xFFFA) | (readmem(0xFFFB) << 8);
-				p.i = 1;
-				polltime(7);
-				nmi = 0;
-				nmilock = 1;
-//                                rpclog("NMI %04X\n",pc);
-			}
-			oldnmi = nmi;
-
-			if (motoron)
-			{
-				if (fdctime)
-				{
-					fdctime -= oldcyc; if (fdctime <= 0)
-						fdccallback();
-				}
-				disctime -= oldcyc; if (disctime <= 0)
-				{
-					disctime += 8; disc_poll();
-				}
-			}
-
-			if ((interrupt && !p.i && !skipint) || skipint == 2)
-			{
-//                                printf("Intrupt\n");
-//                                if (skipint==2) printf("interrupt\n");
-//				rpclog("Interrupt\n");
-				skipint = 0;
-				push(pc >> 8);
-				push(pc & 0xFF);
-				temp = 0x20;
-				if (p.c)
-					temp |= 1;
-				if (p.z)
-					temp |= 2;
-				if (p.i)
-					temp |= 4;
-				if (p.d)
-					temp |= 8;
-				if (p.v)
-					temp |= 0x40;
-				if (p.n)
-					temp |= 0x80;
-				push(temp);
-				pc = readmem(0xFFFE) | (readmem(0xFFFF) << 8);
-				p.i = 1;
-				polltime(7);
-//                                if (pc<0x100)
-//                                {
-//                                        printf("Interrupt line %i %04X %04X %02X %02X %02X %02X %i %i %i\n",lines,cia2.t1c,cia2.t2c,cia1.ifr,vic.ifr,cia2.ifr,cia2.ier,nmi,oldnmi,nmilock);
-//                                        output2=1;
-//                                }
-//                                output=1;
-//                                printf("Interrupt line %i %i %02X %02X %02X %02X\n",interrupt,lines,sysvia.ifr&sysvia.ier,uservia.ifr&uservia.ier,uservia.ier,uservia.ifr);
-			}
-			if (interrupt && !p.i && skipint)
-			{
-				skipint = 2;
-//                                printf("skipint=2\n");
-			}
-		}
-		if (motorspin)
-		{
-			motorspin--;
-			if (motorspin <= 0)
-			{
-				motorspin = 0;
-				fdcspindown();
-			}
-		}
-		} // if execite
-	}
-//        rpclog("Exec over\n");
+	the_cpu->cycles=0;
+	the_cpu->pc=*(uint16_t*)&(the_cpu->mem[0xfffc]);
+	the_cpu->p |= FLAG_I;
+	the_cpu->nmi =0;
+	//output=0;
+	rpclog("\n\n6502 RESET, pc=%04x!\n", the_cpu->pc);
 }
 
+
+
+int adc_bcd(M6502* cpu, uint8_t temp) {
+	//rpclog("Doing ADC BCD! %d", temp);
+	register int ah=0;
+	register uint8_t tempb = cpu->a+temp+((cpu->p & FLAG_C)?1:0);
+	if (!tempb)
+	   cpu->p |= FLAG_Z;
+	register int al=(cpu->a&0xF)+(temp&0xF)+((cpu->p & FLAG_C)?1:0);
+	if (al>9) {
+		al-=10;
+		al&=0xF;
+		ah=1;
+	}
+	ah+=((cpu->a>>4)+(temp>>4));
+	if (ah&8)
+		cpu->p |= FLAG_N;
+	SET_FLAG(FLAG_V, (((ah << 4) ^ cpu->a) & 128) && !((cpu->a ^ temp) & 128));
+	cpu->p &= ~FLAG_C;
+	if (ah>9) {
+		cpu->p |= FLAG_C;
+		ah-=10;
+		ah&=0xF;
+	}
+	cpu->a=(al&0xF)|(ah<<4);
+}
+
+int sbc_bcd(M6502* cpu, uint8_t temp) {
+	register int hc6=0;
+	cpu->p &= ~(FLAG_Z | FLAG_N);
+	if (!((cpu->a-temp)-((cpu->p & FLAG_C)?0:1)))
+	   cpu->p |= FLAG_Z;
+	register int al=(cpu->a&15)-(temp&15)-((cpu->p & FLAG_C)?0:1);
+	if (al&16) {
+		al-=6;
+		al&=0xF;
+		hc6=1;
+	}
+	register int ah=(cpu->a>>4)-(temp>>4);
+	if (hc6) ah--;
+	if ((cpu->a-(temp+((cpu->p & FLAG_C)?0:1)))&0x80)
+	   cpu->p |= FLAG_N;
+	SET_FLAG(FLAG_V, (((cpu->a-(temp+((cpu->p & FLAG_C)?0:1)))^temp)&128)&&((cpu->a^temp)&128));
+	cpu->p |= FLAG_C;
+	if (ah&16)  {
+		cpu->p &= ~FLAG_C;
+		ah -= 6;
+		ah &= 0xF;
+	}
+	cpu->a=(al&0xF)|((ah&0xF)<<4);
+}
+
+
+
+#define SBC(temp) \
+	if (!(cpu->p & FLAG_D)) { \
+		register uint8_t c=(cpu->p & FLAG_C)?0:1; \
+		register uint16_t tempw=cpu->a-(temp+c);    \
+		register int tempv=(short)cpu->a-(short)(temp+c);            \
+		SET_FLAG(FLAG_V, ((cpu->a ^ (temp+c)) & (cpu->a ^ (uint8_t)tempv)&0x80)); \
+		SET_FLAG(FLAG_C, tempv>=0);\
+		cpu->a=tempw&0xFF;              \
+		setzn(cpu->a);                  \
+	}                                  \
+	else {                                  \
+		register int hc6=0;                               \
+		cpu->p &= ~(FLAG_Z | FLAG_N);                            \
+		if (!((cpu->a-temp)-((cpu->p & FLAG_C)?0:1)))            \
+		   cpu->p |= FLAG_Z;                             \
+		   register int al=(cpu->a&15)-(temp&15)-((cpu->p & FLAG_C)?0:1);      \
+		if (al&16) {                                   \
+				al-=6;                      \
+				al&=0xF;                    \
+				hc6=1;                       \
+		}                                   \
+		register int ah=(cpu->a>>4)-(temp>>4);                \
+		if (hc6) ah--;                       \
+		if ((cpu->a-(temp+((cpu->p & FLAG_C)?0:1)))&0x80)        \
+		   cpu->p |= FLAG_N;                             \
+		SET_FLAG(FLAG_V, (((cpu->a-(temp+((cpu->p & FLAG_C)?0:1)))^temp)&128)&&((cpu->a^temp)&128)); \
+		cpu->p |= FLAG_C; \
+		if (ah&16)  { \
+			cpu->p &= ~FLAG_C; \
+			ah-=6;                      \
+			ah&=0xF;                    \
+		}                                   \
+		cpu->a=(al&0xF)|((ah&0xF)<<4);                 \
+	}
+
+
+
+typedef int (*FN)(M6502*);
+FN fns[];
+/*
+int callcounts[256];
+void dump_callcounts() {
+	int i;
+	for (i=0 ; i<256 ; i++) {
+		rpclog("count,%02X,%d", i, callcounts[i]);
+	}
+	memset(callcounts, 0, sizeof(callcounts));
+}*/
+
+
+int vidclockacc=0;
+
+void do_poll(M6502* cpu, int c) {
+
+	if (otherstuffcount<=0) {
+		otherstuffcount+=128;
+//		logvols();
+		if (motorspin) {
+			motorspin--;
+			if (!motorspin) fdcspindown();
+		}
+	}
+
+
+
+	// Time to poll hardware?
+	if (c > 0) {
+		/*vidclockacc += c;
+		if (vidclockacc>=128) {
+			pollvideo(vidclockacc);
+			vidclockacc=0;
+		}*/
+
+//		pollvideo(c);
+//		sysvia.t1c -= c;
+//		if (!(sysvia.acr&0x20))  sysvia.t2c-=c;
+//		if (sysvia.t1c<-3  || sysvia.t2c<-3)  updatesystimers();
+//		uservia.t1c-=c;
+//		if (!(uservia.acr&0x20)) uservia.t2c-=c;
+//		if (uservia.t1c<-3 || uservia.t2c<-3) updateusertimers();
+
+		otherstuffcount-=c;
+		if (motoron) {
+			if (fdctime) {
+				fdctime-=c;
+				if (fdctime<=0) fdccallback();
+			}
+			disctime-=c;
+			if (disctime<=0) {
+				disctime+=16; disc_poll();
+			}
+		}
+	}
+
+}
+
+void logasm(int v) {
+	rpclog("here! %08x", v);
+}
+void log_undef_opcode(M6502* cpu) {
+	rpclog("Undefined opciode! pc=%04x", cpu->pc);
+}
+
+
+int fn_arr(M6502* cpu) {
+	cpu->a&=readmem(cpu->pc); cpu->pc++;
+	register int tempi=cpu->p & FLAG_C;
+	if (cpu->p & FLAG_D) // This instruction is just as broken on a real 6502 as it is here
+	{
+		SET_FLAG(FLAG_V, ((cpu->a>>6)^(cpu->a>>7))); // V set if bit 6 changes in ROR
+		cpu->a>>=1;
+			if (tempi) cpu->a|=0x80;
+			setzn(tempi);
+		    cpu->p &= ~FLAG_C;
+			if ((cpu->a&0xF)+(cpu->a&1)>5) cpu->a=(cpu->a&0xF0)+((cpu->a&0xF)+6); // Do broken fixup
+			if ((cpu->a&0xF0)+(cpu->a&0x10)>0x50) { cpu->a+=0x60; cpu->p |= FLAG_C; }
+	}
+	else
+	{       //V & C flag behaviours in 64doc.txt are backwards
+		SET_FLAG(FLAG_V, ((cpu->a>>6)^(cpu->a>>7))); //V set if bit 6 changes in ROR
+		cpu->a>>=1;
+		if (tempi) cpu->a|=0x80;
+		setzn(cpu->a);
+		SET_FLAG(FLAG_C, cpu->a&0x40);
+	}
+	return 2;
+}
+int fn_brk(M6502* cpu) {
+	//rpclog("BRK! at %04X", cpu->pc);
+	cpu->pc++;
+	push(cpu->pc>>8);
+	push(cpu->pc&0xFF);
+	register uint8_t temp=0x30 | cpu->p;
+	push(temp);
+	cpu->pc=*(uint16_t*)&(cpu->mem[0xfffe]);
+	cpu->p |= FLAG_I;
+	cpu->takeint=0;
+	return -7;
+}
+
+
+
+
+int fn_asr_imm(M6502* cpu) {
+	cpu->a &= readmem(cpu->pc); cpu->pc++;
+	SET_FLAG(FLAG_C, cpu->a & 1);
+	cpu->a >>= 1;
+	setzn(cpu->a);
+	return 2;
+}
+
+
+
+int fn_anc_imm(M6502* cpu) {
+	cpu->a &= readmem(cpu->pc);
+	cpu->pc++;
+	setzn(cpu->a);
+	SET_FLAG(FLAG_C, cpu->p & FLAG_N);
+	return 2;
+}
+
+
+int fn_sre_x(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc)+cpu->x; cpu->pc++;
+	register uint16_t addr=readword(temp);
+	temp=readmem(addr);
+	SET_FLAG(FLAG_C, temp&1);
+	temp>>=1;
+	writemem(addr,temp);
+	cpu->a ^= temp;
+	setzn(cpu->a);
+	return 7;
+}
+
+
+int fn_sre_zp(M6502* cpu) {
+	register uint16_t addr=readmem(cpu->pc); cpu->pc++;
+	register uint8_t temp=readmem(addr);
+	SET_FLAG(FLAG_C, temp&1);
+	temp>>=1;
+	writemem(addr,temp);
+	cpu->a ^= temp;
+	setzn(cpu->a);
+	return 5;
+}
+
+int fn_sre_abs(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	register uint8_t temp=readmem(addr);
+	SET_FLAG(FLAG_C, temp&1);
+	temp>>=1;
+	writemem(addr,temp);
+	cpu->a^=temp;
+	setzn(cpu->a);
+	return 6;
+}
+
+int fn_sre_y(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc); cpu->pc++;
+	register uint16_t addr=readword(temp);
+	register int clocks = 7;
+	if ((addr&0xFF00)^((addr+cpu->y)&0xFF00))clocks++;
+	temp=readmem(addr+cpu->y);
+	//?writemem(addr+cpu->y,temp);
+	SET_FLAG(FLAG_C, temp&1);
+	temp>>=1;
+	writemem(addr+cpu->y,temp);
+	cpu->a^=temp;
+	setzn(cpu->a);
+	return clocks;
+}
+
+
+int fn_sre_zp_x(M6502* cpu) {
+	register uint16_t addr=(readmem(cpu->pc)+cpu->x)&0xFF; cpu->pc++;
+	register uint8_t temp=readmem(addr);
+	//writemem(addr,temp);
+    SET_FLAG(FLAG_C, temp&1);
+	temp>>=1;
+	writemem(addr,temp);
+	cpu->a^=temp;
+	setzn(cpu->a);
+	return 5;
+}
+
+
+int fn_sre_abs_y(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	register int clocks = 6;
+	if ((addr&0xFF00)^((addr+cpu->y)&0xFF00)) clocks++;
+	register uint8_t temp=readmem(addr+cpu->y);
+	writemem(addr+cpu->y,temp);
+    SET_FLAG(FLAG_C, temp&1);
+	temp>>=1;
+	writemem(addr+cpu->y,temp);
+	cpu->a^=temp;
+	setzn(cpu->a);
+	return clocks;
+}
+
+
+int fn_sre_abs_x(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	register int clocks = 6;
+	if ((addr&0xFF00)^((addr+cpu->x)&0xFF00)) clocks++;
+	register uint8_t temp=readmem(addr+cpu->x);
+	writemem(addr+cpu->x,temp);
+    SET_FLAG(FLAG_C, temp&1);
+	temp>>=1;
+	writemem(addr+cpu->x,temp);
+	cpu->a^=temp;
+	setzn(cpu->a);
+	return clocks;
+}
+
+
+int fn_sax_x(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc)+cpu->x; cpu->pc++;
+	register uint16_t addr=readword(temp);
+	writemem(addr,cpu->a&cpu->x);
+	return 6;
+}
+
+int fn_sax_zp(M6502* cpu) {
+	register uint16_t addr=readmem(cpu->pc); cpu->pc++;
+	writemem(addr,cpu->a&cpu->x);
+	return 3;
+}
+
+int fn_ane(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc); cpu->pc++;
+	cpu->a=(cpu->a|0xEE)&cpu->x&temp; //Internal parameter always 0xEE on BBC, always 0xFF on Electron
+	setzn(cpu->a);
+	return 2;
+}
+
+int fn_sax_abs(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	writemem(addr,cpu->a&cpu->x);
+	return 4;
+}
+
+
+int fn_sha_y(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc); cpu->pc++;
+	register uint16_t addr=readword(temp);
+	writemem(addr+cpu->y,cpu->a&cpu->x&((addr>>8)+1));
+	return 6;
+}
+
+int fn_sax_zp_y(M6502* cpu) {
+	register uint16_t addr=readmem(cpu->pc); cpu->pc++;
+	writemem((addr+cpu->y)&0xFF,cpu->a&cpu->x);
+	return 4;
+}
+
+int fn_shs_abs_y(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	readmem((addr&0xFF00)+((addr+cpu->y)&0xFF));
+	writemem(addr+cpu->y,cpu->a&cpu->x&((addr>>8)+1));
+	cpu->s=cpu->a&cpu->x;
+	return 5;
+}
+
+int fn_shy_abs_x(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	readmem((addr&0xFF00)+((addr+cpu->x)&0xFF));
+	writemem(addr+cpu->x,cpu->y&((addr>>8)+1));
+	return 5;
+}
+
+int fn_shx_abs_y(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	readmem((addr&0xFF00)|((addr+cpu->x)&0xFF));
+	writemem(addr+cpu->y,cpu->x&((addr>>8)+1));
+	return 5;
+}
+
+int fn_sha_abs_y(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	readmem((addr&0xFF00)|((addr+cpu->x)&0xFF));
+	writemem(addr+cpu->y, cpu->a & cpu->x & ((addr>>8)+1));
+	return 5;
+}
+
+
+int fn_lax_y(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc)+cpu->x; cpu->pc++;
+	register uint16_t addr=readword(temp);
+	cpu->a=cpu->x=readmem(addr);
+	setzn(cpu->a);
+	return 6;
+}
+
+int fn_lax_zp(M6502* cpu) {
+	register uint16_t addr=readmem(cpu->pc); cpu->pc++;
+	cpu->a=cpu->x=readmem(addr);
+	setzn(cpu->a);
+	return 3;
+}
+int fn_lax(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc); cpu->pc++;
+	cpu->a=cpu->x=((cpu->a|0xEE)&temp); //WAAAAY more complicated than this, but it varies from machine to machine anyway
+	setzn(cpu->a);
+	return 2;
+}
+int fn_lax_abs(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	cpu->a=cpu->x=readmem(addr);
+	setzn(cpu->a);
+	return 4;
+}
+
+int fn_lax_y2(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc); cpu->pc++;
+	register uint16_t addr=readword(temp);
+	register int clocks = 5;
+	if ((addr&0xFF00)^((addr+cpu->y)&0xFF00)) clocks++;
+	cpu->a=cpu->x=readmem(addr+cpu->y);
+	setzn(cpu->a);
+	return clocks;
+}
+int fn_lax_zp_y(M6502* cpu) {
+	register uint16_t addr=readmem(cpu->pc); cpu->pc++;
+    cpu->a=cpu->x=readmem((addr+cpu->y)&0xFF);
+	setzn(cpu->a);
+	return 3;
+}
+
+int fn_las_abs_y(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	int cl = 4;
+	if ((addr&0xFF00)^((addr+cpu->y)&0xFF00)) cl++;
+    cpu->a= cpu->x = cpu->s = cpu->s & readmem(addr+cpu->y); //No, really!
+	setzn(cpu->a);
+	return cl;
+}
+
+
+int fn_lax_abs_y(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	int cl=4;
+	if ((addr&0xFF00)^((addr+cpu->y)&0xFF00)) cl++;
+    cpu->a=cpu->x=readmem(addr+cpu->y);
+	setzn(cpu->a);
+	return cl;
+}
+int fn_dcp_indx(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc)+cpu->x; cpu->pc++;
+	register uint16_t addr=readword(temp);
+	temp=readmem(addr);
+	writemem(addr,temp);
+	temp--;
+	writemem(addr,temp);
+	setzn(cpu->a-temp);
+    SET_FLAG(FLAG_C, cpu->a>=temp);
+	return 7;
+}
+
+int fn_dcp_zp(M6502* cpu) {
+	register uint16_t addr=readmem(cpu->pc); cpu->pc++;
+	register uint8_t temp=readmem(addr)-1;
+	writemem(addr,temp);
+	setzn(cpu->a-temp);
+    SET_FLAG(FLAG_C, cpu->a>=temp);
+	return 5;
+}
+
+int fn_sbx_imm(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc); cpu->pc++;
+	setzn((cpu->a&cpu->x)-temp);
+    SET_FLAG(FLAG_C, (cpu->a&cpu->x)>=temp);
+    cpu->x=(cpu->a&cpu->x)-temp;
+	return 2;
+}
+int fn_dcp_abs(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	register uint8_t temp=readmem(addr)-1;
+	writemem(addr,temp);
+	setzn(cpu->a-temp);
+    SET_FLAG(FLAG_C, cpu->a>=temp);
+	return 6;
+}
+
+int fn_dcp_indy(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc); cpu->pc++;
+	register uint16_t addr=readword(temp);
+	int clocks = 7;
+	if ((addr&0xFF00)^((addr+cpu->y)&0xFF00)) clocks++;
+	temp=readmem(addr)-1;
+	writemem(addr,temp+1);
+	writemem(addr,temp);
+	setzn(cpu->a-temp);
+    SET_FLAG(FLAG_C, cpu->a>=temp);
+	return clocks;
+}
+
+int fn_dcp_zp_x(M6502* cpu) {
+	register uint16_t addr=(readmem(cpu->pc)+cpu->x)&0xFF; cpu->pc++;
+	register uint8_t temp=readmem(addr)-1;
+	writemem(addr,temp);
+	setzn(cpu->a-temp);
+    SET_FLAG(FLAG_C, cpu->a>=temp);
+	return 5;
+}
+
+int fn_dcp_abs_y(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	int clocks = 6;
+	if ((addr&0xFF00)^((addr+cpu->y)&0xFF00)) clocks++;
+	register uint8_t temp=readmem(addr+cpu->y)-1;
+	//writemem(addr+cpu->y,temp+1);
+	writemem(addr+cpu->y,temp);
+	setzn(cpu->a-temp);
+    SET_FLAG(FLAG_C, cpu->a>=temp);
+	return clocks;
+}
+
+int fn_dcp_abs_x(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	int clocks = 6;
+	if ((addr&0xFF00)^((addr+cpu->x)&0xFF00)) clocks++;
+	register uint8_t temp=readmem(addr+cpu->x)-1;
+	//writemem(addr+cpu->x,temp+1);
+	writemem(addr+cpu->x,temp);
+	setzn(cpu->a-temp);
+    SET_FLAG(FLAG_C, cpu->a>=temp);
+	return clocks;
+}
+
+int fn_isb_indx(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc)+cpu->x; cpu->pc++;
+	register uint16_t addr=readword(temp);
+	temp=readmem(addr);
+	temp++;
+	writemem(addr,temp);
+	SBC(temp);
+	return 7;
+}
+
+int fn_isb_zp(M6502* cpu) {
+	register uint16_t addr=readmem(cpu->pc); cpu->pc++;
+	register uint8_t temp=readmem(addr);
+	//?writemem(addr,temp);
+	temp++;
+	writemem(addr,temp);
+	SBC(temp);
+	return 5;
+}
+
+int fn_isb_abs(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	register uint8_t temp=readmem(addr);
+	temp++;
+	writemem(addr,temp);
+	SBC(temp);
+	return 6;
+}
+
+
+int fn_isb_indy(M6502* cpu) {
+	register uint8_t temp=readmem(cpu->pc); cpu->pc++;
+	register uint16_t addr=readword(temp);
+	int clocks = 7;
+	if ((addr&0xFF00)^((addr+cpu->y)&0xFF00)) clocks++;
+	temp=readmem(addr+cpu->y);
+	temp++;
+	writemem(addr+cpu->y,temp);
+	SBC(temp);
+	return clocks;
+}
+
+
+int fn_isb_zp_x(M6502* cpu) {
+	register uint16_t addr=(readmem(cpu->pc)+cpu->x)&0xFF; cpu->pc++;
+	register uint8_t temp=readmem(addr);
+	temp++;
+	writemem(addr,temp);
+	SBC(temp);
+	return 5;
+}
+
+
+int fn_isb_abs_y(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	addr += cpu->y;
+	register uint8_t temp=readmem(addr);
+	temp++;
+	writemem(addr,temp);
+	SBC(temp);
+	return 7;
+}
+
+
+int fn_isb_abs_x(M6502* cpu) {
+	register uint16_t addr=readwordpc();
+	addr += cpu->x;
+	register uint8_t temp=readmem(addr);
+	temp++;
+	writemem(addr,temp);
+	SBC(temp);
+	return 7;
+}
+
+FN fns[] = {
+	fn_brk, 	// 0x00
+	0, 	// 0x01  	ORA (,x)
+	0,
+	0,  // 0x03: Undocumented - SLO (,x)
+	0,  // 0x04: Undocumented - NOP zp
+	0,	// 0x05: ORA zp
+	0,  // 0x06: ASL zp
+	0,  // 0x07: Undocumented - SLO zp
+	0,     // 0x08: PHP
+	0, // 0x09: ORA imm
+	0,   // 0x0A: ASL A
+	fn_anc_imm, // 0x0B: Undocumented - ANC imm
+	0, // 0x0C: Undocumented - NOP abs
+	0, // 0x0D: ORA abs
+	0, // 0x0E: ASL abs
+	0, // 0x0F: Undocumented - SLO abs
+	0,     // 0x10: BPL
+	0,   // 0x11: ORA (),y
+	0,
+	0,   // 0x13: Undocumented - SLO (),y
+	0,// 0x14: Undocumented - NOP zp,x
+	0,// 0x15: ORA zp,x
+	0,// 0x16: ASL zp,x
+	0,// 0x17: Undocumented - SLO zp,x
+	0,     // 0x18: CLC
+	0,//0x19: ORA abs,y
+	0,     // 0x1A: Undocumented - NOP
+	0,//0x1B: Undocumented - SLO abs,y
+	0,//0x1C: Undocumented - NOP abs,x
+	0,//0x1D: ORA abs,x
+	0,//0x1E: ASL abs,x
+	0,//0x1F: Undocumented - SLO abs,x
+	0,     // 0x20: JSR
+	0,   // 0x21: AND (,x)
+	0,
+	0,	// 0x23: Undocumented - RLA (,x)
+	0,	// 0x24: BIT zp
+	0,  // 0x25: AND zp
+	0,  // 0x26: ROL zp
+	0,  // 0x27: Undocumented - RLA zp
+	0,     // 0x28: PLP
+	0,		// 0x29: AND
+	0,   // 0x2A: ROL A
+	fn_anc_imm, // 0x2B: Undocumented - ANC imm
+	0, // 0x2C: BIT abs
+	0, // 0x2D: AND abs
+	0, // 0x2E: ROL abs
+	0, // 0x2F: Undocumented - RLA abs
+	0, 	// 0x30: BMI
+	0,   // 0x31: AND (),y
+	0,
+	0,   // 0x33: Undocumented - RLA (),y
+	0,// 0x34: Undocumented - NOP zp,x
+	0,// 0x35: AND zp,x
+	0,// 0x36: ROL zp,x
+	0,// 0x37: Undocumented - RLA zp,x
+	0, 	// 0x38: SEC
+	0,//0x39: AND abs,y
+	0,	    // 0x3A: Undocumented - NOP
+	0,//0x3B: Undocumented - RLA abs,y
+	0,//0x3C: Undocumented - NOP abs,x
+	0,//0x3D: AND abs,x
+	0,//0x3E: ROL abs,x
+	0,//0x3F: Undocumented - RLA abs,x
+	0,     // 0x40: RTI
+	0,   // 0x41: EOR (,x)
+	0,
+	fn_sre_x,   // 0x43: Undocumented - SRE (,x)
+	0,  // 0x44:
+	0,  // 0x45: EOR zp
+	0,  // 0x46: LSR zp
+	fn_sre_zp,  // 0x47: Undocumented - SRE zp
+	0,     // 0x48: PHA
+	0, // 0x49: EOR imm
+	0,   // 0x4A: LSR A
+	fn_asr_imm, // 0x4B: Undocumented - ASR imm
+	0,		// 0x4C: JMP
+	0, // 0x4D: EOR abs
+	0, // 0x4E: LSR abs
+	fn_sre_abs, // 0x4F: Undocumented - SRE abs
+	0,     // 0x50: BVC
+	0,   // 0x51: EOR (),y
+	0,
+	fn_sre_y,   // 0x53: Undocumented - SRE (),y
+	0,// 0x54:
+	0,// 0x55: EOR zp,x
+	0,// 0x56: LSR zp,x
+	0,// 0x57: Undocumented - SRE zp,x
+	0,     // 0x58: CLI
+	0,//0x59: EOR abs,y
+	0,      //0x5A: Undocumented - NOP
+	fn_sre_abs_y,//0x5B: Undocumented - SRE abs,y
+	0,//0x5C: Undocumented - NOP abs,x
+	0,//0x5D: EOR abs,x
+	0,//0x5E: LSR abs,x
+	fn_sre_abs_x,//0x5F: Undocumented - SRE abs,x
+	0, 	// 0x60: RTS
+	0,   // 0x61: ADC (,x)
+	0,
+	0,   // 0x63: Undocumented - RRA (,x)
+	0,  // 0x64: Undocumented - NOP zp
+	0,  // 0x65: ADC zp
+	0,  // 0x66: ROR zp
+	0,  // 0x67: Undocumented - RRA zp
+	0,     // 0x68: PLA
+	0, // 0x69: ADC imm
+	0,   // 0x6A: ROR A
+	fn_arr,     // 0x6B: Undocumented - ARR
+	0, // 0x6C: JMP ()
+	0, // 0x6D: ADC abs
+	0, // 0x6E: ROR abs
+	0, // 0x6F: Undocumented - RRA abs
+	0,     // 0x70: BVS
+	0,   // 0x71: ADC (),y
+	0,
+	0,   // 0x73: Undocumented - RRA (,y)
+	0,// 0x74: Undocumented - NOP zp,x
+	0,// 0x75: ADC zp,x
+	0,// 0x76: ROR zp,x
+	0,// 0x77: Undocumented - RRA zp,x
+	0,     // 0x78: SEI
+	0,//0x79: ADC abs,y
+	0,     // 0x7A: Undocumented - NOP
+	0,//0x7B: Undocumented - RRA abs,y
+	0,
+	0,//0x7D: ADC abs,x
+	0,//0x7E: ROR abs,x
+	0,//0x7F: Undocumented - RRA abs,x
+	0,  //0x80: Undocumented - NOP imm
+	0,   // 0x81: STA (,x)
+	0, // 0x82: Undocumented - NOP imm
+	fn_sax_x,   // 0x83: Undocumented - SAX (,x)
+	0,  // 0x84: STY zp
+	0,  // 0x85: STA zp
+	0,  // 0x86: STX zp
+	fn_sax_zp,  // 0x87: Undocumented - SAX zp
+	0,     // 0x88: DEY
+	0, // 0x89: Undocumented - NOP imm
+	0,     // 0x8A: TXA
+	fn_ane,     // 0x8B: Undocumented - ANE
+	0, // 0x8C: STY abs
+	0, // 0x8D: STA abs
+	0, // 0x8E: STX abs
+	fn_sax_abs, // 0x8F: Undocumented - SAX abs
+	0,     // 0x90: BCC
+	0,   // 0x91: STA (),y
+	0,
+	fn_sha_y,   // 0x93: Undocumented - SHA (),y
+	0,// 0x94: STY zp,x
+	0,// 0x95: STA zp,x
+	0,// 0x96: STX zp,y
+	fn_sax_zp_y,// 0x97: Undocumented - SAX zp,y
+	0,     // 0x98: TYA
+	0,//0x99: STA abs,y
+	0,     // 0x9A: TXS
+	fn_shs_abs_y,//0x9B: Undocumented - SHS abs,y
+	fn_shy_abs_x,//0x9C: Undocumented - SHY abs,x
+	0,//0x9D: STA abs,x
+	fn_shx_abs_y,//0x9E: Undocumented - SHX abs,y
+	fn_sha_abs_y,//0x9F: Undocumented - SHA abs,y
+	0, // 0xA0: LDY imm
+	0,   // 0xA1: LDA (,x)
+	0, // 0xA2: LDX imm
+	fn_lax_y,   // 0xA3: Undocumented - LAX (,y)
+	0,  // 0xA4: LDY zp
+	0,  // 0xA5: LDA zp
+	0,  // 0xA6: LDX zp
+	fn_lax_zp,  // 0xA7: Undocumented - LAX zp
+	0,     // 0xA8: TAY
+	0, // 0xA9: LDA imm
+	0,     // 0xAA: TAX
+	fn_lax,     // 0xAB: Undocumented - LAX
+	0, // 0xAC: LDY abs
+	0, // 0xAD: LDA abs
+	0, // 0xAE: LDX abs
+	0, // 0xAF: LAX abs
+	0,     // 0xB0: BCS
+	0,   // 0xB1: LDA (),y
+	0,
+	fn_lax_y2,  // 0xB3: LAX (),y
+	0,// 0xB4: LDY zp,x
+	0,// 0xB5: LDA zp,x
+	0,// 0xB6: LDX zp,y
+	0,// 0xB7: LAX zp,y
+	0,     // 0xB8: CLV
+	0,//0xB9: LDA abs,y
+	0,     // 0xBA: TSX
+	fn_las_abs_y,//0xBB: Undocumented - LAS abs,y
+	0,//0xBC: LDY abs,x
+	0,//0xBD: LDA abs,x
+	0,//0xBE: LDX abs,y
+	0,//0xBF: LAX abs,y
+	0, // 0xC0: CPY imm
+	0,// 0xC1: CMP (,x)
+	0, // 0xC2: Undocumented - NOP imm
+	fn_dcp_indx,// 0xC3: Undocumented - DCP (,x)
+	0,  // 0xC4: CPY zp
+	0,  // 0xC5: CMP zp
+	0,  // 0xC6: DEC zp
+	fn_dcp_zp,  // 0xC7: Undocumented - DCP zp
+	0,     // 0xC8: INY
+	0, // 0xC9: CMP imm
+	0,     // 0xCA: DEX
+	fn_sbx_imm, // 0xCB: Undocumented - SBX imm
+	0, // 0xCC: CPY abs
+	0, // 0xCD: CMP abs
+	0, // 0xCE: DEC abs
+	fn_dcp_abs, // 0xCF: Undocumented - DCP abs
+	0,     // 0xD0: BNE
+	0,// 0xD1: CMP (),y
+	0,
+	fn_dcp_indy,// 0xD3: Undocumented - DCP (),y
+	0,// 0xD4: Undocumented - NOP zp,x
+	0,// 0xD5: CMP zp,x
+	0,// 0xD6: DEC zp,x
+	fn_dcp_zp_x,// 0xD7: Undocumented - DCP zp,x
+	0,     // 0xD8: CLD
+	0,//0xD9: CMP abs,y
+	0,     // 0xDA: Undocumented - NOP
+	fn_dcp_abs_y,//0xDB: Undocumented - DCP abs,y
+	0,//0xDC: Undocumented - NOP abs,x
+	0,//0xDD: CMP abs,x
+	0,//0xDE: DEC abs,x
+	fn_dcp_abs_x,//0xDF: Undocumented - DCP abs,x
+	0, // 0xE0: CPX imm
+	0,// 0xE1: SBC (,x)
+	0, // 0xE2: Undocumented - NOP imm
+	fn_isb_indx,// 0xE3: Undocumented - ISB (,x)
+	0,  // 0xE4: CPX zp
+	0,  // 0xE5: SBC zp
+	0,  // 0xE6: INC zp
+	fn_isb_zp,  // 0xE7: Undocumented - ISB zp
+	0,     // 0xE8: INX
+	0, // 0xE9: SBC imm
+	0,     // 0xEA: NOP
+	0, // 0xEB: Undocumented - SBC imm
+	0, // 0xEC: CPX abs
+	0, // 0xED: SBC abs
+	0, // 0xEE: INC abs
+	fn_isb_abs, // 0xEF: Undocumented - ISB abs
+	0,     // 0xF0: BEQ
+	0,// 0xF1: SBC (),y
+	0,
+	fn_isb_indy,// 0xF3: Undocumented - ISB (),y
+	0, // 0xF4: Undocumented - NOP zpx
+	0,// 0xF5: SBC zp,x
+	0,// 0xF6: INC zp,x
+	fn_isb_zp_x,// 0xF7: Undocumented - ISB zp,x
+	0,     // 0xF8: SED
+	0,//0xF9: SBC abs,y
+	0,     // 0xFA: Undocumented - NOP
+	fn_isb_abs_y,//0xFB: Undocumented - ISB abs,y
+	0,//0xFC: Undocumented - NOP abs,x
+	0,//0xFD: SBC abs,x
+	0,//0xFE: INC abs,x
+	fn_isb_abs_x,//0xFF: Undocumented - ISB abs,x
+};
+//*/
+
+uint8_t* save_cpu(uint8_t* p)
+{
+	*p++ = the_cpu->a;
+	*p++ = the_cpu->x;
+	*p++ = the_cpu->y;
+	*p++ = the_cpu->p;
+	*p++ = the_cpu->s;
+	*(uint16_t*)p = the_cpu->pc; p+=2;
+	*p++ = the_cpu->nmi;
+	*p++ = the_cpu->interrupt;
+	*(uint32_t*)p = the_cpu->cycles; p+=4;
+	return p;
+}
+
+uint8_t* load_cpu(uint8_t* p)
+{
+	the_cpu->a=*p++;
+	the_cpu->x=*p++;
+	the_cpu->y=*p++;
+	the_cpu->p=*p++;
+	the_cpu->s=*p++;
+	the_cpu->pc = *(uint16_t*)p; p+=2;
+	the_cpu->nmi=*p++;
+	the_cpu->interrupt=*p++;
+	the_cpu->cycles = *(uint32_t*)p; p+=4;
+	return p;
+}
+
+
+void update_atom_display(int linenum)
+{
+  int lines;
+  int i;
+  for (lines = 0; lines < linenum; lines++)
+    {
+      if (lines < 262 || lines == 311) {
+	drawline(lines);
+      }
+
+      //      for (i = 0; i < 64; i++) {
+	exec6502();	
+	//	debuglog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
+	// }
+
+      pollsound();
+    }
+}

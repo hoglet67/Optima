@@ -32,9 +32,9 @@ int main(int argc, char **argv)
 	int newf11;
 	ALLEGRO_KEYBOARD_STATE key_state;
 
-	// al_init();
+	al_init();
 
-	al_install_system(ALLEGRO_VERSION_INT, NULL);
+	// al_install_system(ALLEGRO_VERSION_INT, NULL);
 
 	//get_executable_name(exedir, 511);
 	//p = get_filename(exedir);

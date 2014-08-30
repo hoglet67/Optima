@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "atom.h"
+#include "6502.h"
+
+extern M6502* the_cpu;
 
 void callback8271();
 void data8271(uint8_t dat);
@@ -61,13 +64,13 @@ static void NMI8271()
 {
 	if (i8271.status & 8)
 	{
-		nmi = 1;
+		the_cpu->nmi = 1;
 //                rpclog("NMI\n");
 	}
 	else
-		nmi = 0;
+		the_cpu->nmi = 0;
 		
-	debuglog("FDC:NMI=%d\n",nmi);
+	debuglog("FDC:NMI=%d\n",the_cpu->nmi);
 }
 
 
