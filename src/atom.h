@@ -46,10 +46,10 @@ struct
 {
 	int c, z, i, d, v, n;
 } p;
-extern int nmi;
+//extern int nmi;
 int debug, debugon;
 
-extern uint8_t opcode;
+//extern uint8_t opcode;
 
 int spon, tpon;
 

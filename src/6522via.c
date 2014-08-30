@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 #include "atom.h"
+#include "6502.h"
+
+extern M6502* the_cpu;
 
 #define TIMER1INT 	0x40
 #define TIMER2INT 	0x20
@@ -31,12 +34,12 @@ void updateIFR()
 	if ((via.ifr & 0x7F) & (via.ier & 0x7F))
 	{
 		via.ifr |= 0x80;
-		interrupt |= 2;
+		the_cpu->interrupt |= 1;
 	}
 	else
 	{
 		via.ifr &= ~0x80;
-		interrupt &= ~2;
+		the_cpu->interrupt &= ~1;
 	}
 }
 
@@ -155,7 +158,7 @@ void writevia(uint16_t addr, uint8_t val)
 		if ((via.t2c == -3 && (via.ier & TIMER2INT)) ||
 		    (via.ifr & via.ier & TIMER2INT))
 		{
-			interrupt |= 128;
+//			  the_cpu->interrupt |= 128;
 //                        rpclog("uTimer 2 extra interrupt\n");
 		}
 //                if (output) rpclog("Write uT2CH %i\n",via.t2c);

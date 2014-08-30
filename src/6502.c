@@ -25,12 +25,12 @@ M6502 acpu;
 M6502* the_cpu = &acpu;
 
 //uint8_t ram_fe30,ram_fe34;
-uint8_t* roms;
+//uint8_t* roms;
 
 
-uint8_t acccon;
+//uint8_t acccon;
 int otherstuffcount=0;
-int romsel;
+//int romsel;
 //int FEslowdown[8]={1,0,1,1,0,0,1,0};
 
 
@@ -373,19 +373,10 @@ void do_poll(M6502* cpu, int c) {
 
 	// Time to poll hardware?
 	if (c > 0) {
-		/*vidclockacc += c;
-		if (vidclockacc>=128) {
-			pollvideo(vidclockacc);
-			vidclockacc=0;
-		}*/
 
-//		pollvideo(c);
-//		sysvia.t1c -= c;
-//		if (!(sysvia.acr&0x20))  sysvia.t2c-=c;
-//		if (sysvia.t1c<-3  || sysvia.t2c<-3)  updatesystimers();
-//		uservia.t1c-=c;
-//		if (!(uservia.acr&0x20)) uservia.t2c-=c;
-//		if (uservia.t1c<-3 || uservia.t2c<-3) updateusertimers();
+		via.t1c -= c;
+		if (!(via.acr&0x20))  via.t2c-=c;
+		if (via.t1c<-3  || via.t2c<-3)  updatetimers();
 
 		otherstuffcount-=c;
 		if (motoron) {
