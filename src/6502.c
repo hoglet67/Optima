@@ -177,6 +177,12 @@ uint8_t readmeml(uint16_t addr)
 	else
 		readc[addr] = 31;
 
+	if (addr < 0x7000) {
+	  return ram[addr];
+	} else if (addr >= 0xf000) {
+	  return akernel_ptr[addr & 0x0FFF];
+	}
+
 	if (!bbcmode)
 	{
 		switch (addr & 0xFC00)
@@ -490,6 +496,9 @@ void dumpregs()
 
 #define polltime(c) { cycles -= c; tapecyc -= (c << 2); if (tapecyc < 0) polltape(); totcyc += c; via.t1c -= c; if (!(via.acr & 0x20)) via.t2c -= c; if (via.t1c < -1 || via.t2c < -1) updatetimers(); }
 
+//#define polltime(c) { cycles -= c; }
+
+
 /*ADC/SBC temp variables*/
 uint16_t tempw;
 int tempv, hc, al, ah;
@@ -568,7 +577,7 @@ uint8_t tempb;
 
 int lns;
 uint8_t opcode;
-void exec6502(int linenum, int cpl)
+void exec6502(int linenum, int cpl, int execute, int update)
 {
 	uint16_t addr;
 	uint8_t temp;
@@ -582,9 +591,12 @@ void exec6502(int linenum, int cpl)
 	{
 //                rpclog("Exec line %i\n",lines);
 		lns = lines;
-		if (lines < 262 || lines == 311)
-			drawline(lines);
-		pollsound();
+		if (update && (lines < 262 || lines == 311)) {
+		  drawline(lines);
+		}
+		
+		if (execute) {
+		  pollsound();
 		cycles += cpl;
 //                badline=0;
 		while (cycles > 0)
@@ -2116,6 +2128,7 @@ void exec6502(int linenum, int cpl)
 				fdcspindown();
 			}
 		}
+		} // if execite
 	}
 //        rpclog("Exec over\n");
 }

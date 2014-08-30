@@ -2,14 +2,12 @@
    Disc drive noise*/
 
 #include <allegro.h>
+#include <allegro_audio.h>
 #include <stdio.h>
 #include <string.h>
 #include "atom.h"
 
 int ddvol = 3;
-SAMPLE *seeksmp[4][2], *seek2smp, *seek3smp;
-SAMPLE *stepsmp;
-SAMPLE *motorsmp[3];
 
 float ddnoise_mpos = 0;
 int ddnoise_mstat = -1;
@@ -20,6 +18,11 @@ int ddnoise_sstat = -1;
 int ddnoise_sdir = 0;
 int ddtype = 0;
 
+ALLEGRO_SAMPLE *seeksmp[4][2], *seek2smp, *seek3smp;
+ALLEGRO_SAMPLE *stepsmp;
+ALLEGRO_SAMPLE *motorsmp[3];
+
+#if 0
 void loaddiscsamps()
 {
 	char path[512], p2[512];
@@ -194,3 +197,4 @@ void mixddnoise()
 
 	oldmotoron = motoron;
 }
+#endif

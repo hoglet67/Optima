@@ -10,7 +10,6 @@
 #include "roms.h"
 #include "resources.h"
 #include "sidtypes.h"
-
 #undef printf
 
 int oldf11 = 1;
@@ -24,10 +23,14 @@ int fskipmax = 0;
 
 char ejecttext[2][260] = { "Eject disc :0/2", "Eject disc :1/3" };
 
+char tapefn[260];
+
 void setejecttext(int drive, char *fn)
 {
+  ALLEGRO_PATH *path = al_create_path(fn);
+
 	if (fn[0])
-		sprintf(ejecttext[drive], "Eject drive :%i/%i - %s", drive, drive + 2, get_filename(fn));
+		sprintf(ejecttext[drive], "Eject drive :%i/%i - %s", drive, drive + 2, al_get_path_filename(path));
 	else
 		sprintf(ejecttext[drive], "Eject drive :%i/%i", drive, drive + 2);
 }
@@ -41,6 +44,8 @@ extern int quited;
 int windx = 512, windy = 384;
 extern int dcol;
 extern int ddtype, ddvol, sndddnoise;
+
+#if 0
 
 MENU filemenu[4];
 MENU discmenu[8];
@@ -218,7 +223,6 @@ MENU discmenu[8] =
 	{ NULL,			     NULL,	 NULL, 0, NULL }
 };
 
-char tapefn[260];
 
 int gui_loadt()
 {
@@ -631,4 +635,7 @@ void entergui()
 	if (resetit)
 		atom_reset(0);
 }
+#endif
+
+
 #endif

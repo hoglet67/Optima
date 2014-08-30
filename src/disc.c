@@ -29,13 +29,14 @@ int driveloaders[2];
 void loaddisc(int drive, char *fn)
 {
 	int c = 0;
-	char *p;
+	const char *p;
 	FILE *f;
-
+	ALLEGRO_PATH *path;
 	setejecttext(drive, "");
 	if (!fn)
 		return;
-	p = get_extension(fn);
+	path = al_create_path(fn);
+	p = al_get_path_extension(path);
 	if (!p)
 		return;
 	setejecttext(drive, fn);
@@ -77,7 +78,8 @@ void newdisc(int drive, char *fn)
 {
 	int c = 0, d;
 	FILE *f;
-	char *p = get_extension(fn);
+	ALLEGRO_PATH *path = al_create_path(fn);
+	const char *p = al_get_path_extension(path);
 
 	while (loaders[c].ext)
 	{
@@ -134,7 +136,7 @@ void disc_seek(int drive, int track)
 {
 	if (drives[drive].seek)
 		drives[drive].seek(drive, track);
-	ddnoise_seek(track - oldtrack[drive]);
+	//	ddnoise_seek(track - oldtrack[drive]);
 	oldtrack[drive] = track;
 }
 
@@ -175,14 +177,15 @@ void disc_format(int drive, int track, int side, int density)
 
 void loadtape(char *fn)
 {
-	char *p;
+	const char *p;
+	ALLEGRO_PATH *path = al_create_path(fn);
 
 //        rpclog("loadtape\n");
 	if (!fn)
 		return;
 //        rpclog("get_extension\n");
 //        if (fn[0]==0) return;
-	p = get_extension(fn);
+	p = al_get_path_extension(path);
 	if (!p)
 		return;
 //        rpclog("do load %c\n",p[0]);

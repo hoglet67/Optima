@@ -76,7 +76,7 @@ uint8_t fontdata[] =
 	0x00, 0x00, 0x00, 0x18, 0x24, 0x04, 0x08, 0x08, 0x00, 0x08, 0x00, 0x00,
 };
 
-PALETTE atompal =
+int atompal[9][3] =
 {
 	{ 0,  0,  0  }, /*Black*/
 	{ 0,  63, 0  }, /*Green*/
@@ -89,7 +89,7 @@ PALETTE atompal =
 	{ 63, 0,  0  }, /*Orange - actually red on the Atom*/
 };
 
-PALETTE monopal =
+int monopal[9][3] =
 {
 	{ 8,  8,  8  }, /*Black*/
 	{ 55, 55, 55 }, /*Green*/
@@ -102,49 +102,109 @@ PALETTE monopal =
 	{ 55, 55, 55 }, /*Orange - actually red on the Atom*/
 };
 
-BITMAP *b, *b2;
-int depth;
+ALLEGRO_DISPLAY *display;
+ALLEGRO_BITMAP *b;
+ALLEGRO_LOCKED_REGION *lr;
+
+int screenW;
+int screenH;
+int scaleW;
+int scaleH;
+int scaleX;
+int scaleY;
+
+//int depth;
 void initvideo()
 {
-	depth = desktop_color_depth();
-	set_color_depth(depth);
 
-	#ifdef WIN32
-	set_gfx_mode(GFX_AUTODETECT_WINDOWED, 2048, 2048, 0, 0);
-	#else
-	set_gfx_mode(GFX_AUTODETECT_WINDOWED, 512, 384, 0, 0);
-	#endif
+  screenW = 256;
+  screenH = 192;
 
-	#ifdef WIN32
-	b2 = create_video_bitmap(256, 192);
-	#else
-	b2 = create_bitmap(256, 192);
-	#endif
 
-	set_color_depth(8);
-	b = create_bitmap(256, 192);
+  // TODO: Determine these dynamically
 
-//	if (colourboard)
-//		set_palette(atompal);
-//	else
-//		set_palette(monopal);
-	updatepal();
-	set_color_depth(depth);
+  int displayW = 1920;
+  int displayH = 1080;
+
+  al_set_new_display_flags(ALLEGRO_FULLSCREEN);
+
+  display = al_create_display(displayW, displayH);
+  displayW = al_get_display_width(display);
+  displayH = al_get_display_height(display);
+
+  debuglog("screen is %d x %d\n", displayW, displayH);
+
+  int sx = displayW / screenW;
+  int sy = displayH / screenH;
+  int scale = sx < sy ? sx : sy;
+
+  debuglog("scale is %d\n", scale);
+
+  scaleW = screenW * scale;
+  scaleH = screenH * scale;
+  scaleX = (displayW - scaleW) / 2;
+  scaleY = (displayH - scaleH) / 2;
+
+  al_clear_to_color(al_map_rgb(0, 0, 0));
+  al_flip_display();
+
+  b = al_create_bitmap(screenW, screenH);
+
+  al_set_target_bitmap(b);
+  lr = al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
+
+  // if (colourboard)
+  //    set_palette(atompal);
+  // else
+  //    set_palette(monopal);
+
+  updatepal();
 }
 
-void updatepal()
-{
-	if (colourboard)
-		set_palette(atompal);
-	else
-		set_palette(monopal);
-}
 
 uint8_t *ram;
 int cy = 0, sy = 0;
-int textcol[4] = { 0, 1, 0, 8 };
-int semigrcol[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-int grcol[4] = { 0, 1, 0, 5 };
+
+
+int textcol[4] = {
+  0xff000000,
+  0xff00ff00,
+  0xff000000,
+  0xff007fff
+};
+
+
+int semigrcol[8] = {
+  0xff00ff00,
+  0xff00ffff,
+  0xffff0000,
+  0xff0000ff,
+  0xffffffff,
+  0xffffff00,
+  0xffff00ff,
+  0xff007fff
+};
+
+int grcol[4] = {
+  0xff000000,
+  0xff00ff00,
+  0xff000000,
+  0xffffffff
+};
+
+int black = 0xff000000;
+
+void updatepal()
+{
+
+  //	if (colourboard) 
+  //		set_palette(atompal);
+  //	else
+  //		set_palette(monopal);
+}
+
+
+
 int tapeon;
 int frmcount;
 int fskipcount = 0;
@@ -156,15 +216,26 @@ uint8_t fetcheddat[32];
 
 void drawline(int line)
 {
-	int addr, chr, col;
+        int addr, chr;
+        ALLEGRO_COLOR col;
 	int x, xx;
 	uint8_t temp;
+
+	// debuglog("drawing line %d gfxmode %d \n", line, gfxmode);
+	// double t1 = al_get_time();
+
+
 
 	if (!line)
 		vbl = cy = sy = 0;
 		
 	if (line < 192)
 	{
+	  // al_set_target_bitmap(b);
+
+	  unsigned int *ptr = (unsigned int *)(lr->data + lr->pitch * line);
+	  int col;
+
 		switch (gfxmode)
 		{
 		case 0: case 2: case 4: case 6:         /*Text mode*/
@@ -181,13 +252,22 @@ void drawline(int line)
 					if (chr & 2)
 						col = semigrcol[(temp >> 6) | (css << 1)];
 					else
-						col = 0;
-					b->line[line][x] = b->line[line][x + 1] = b->line[line][x + 2] = b->line[line][x + 3] = col;
+						col = black;
+
+					// b->line[line][x] = b->line[line][x + 1] = b->line[line][x + 2] = b->line[line][x + 3] = col;
+					*ptr++ = col;
+					*ptr++ = col;
+					*ptr++ = col;
+					*ptr++ = col;
 					if (chr & 1)
 						col = semigrcol[(temp >> 6) | (css << 1)];
 					else
-						col = 0;
-					b->line[line][x + 4] = b->line[line][x + 5] = b->line[line][x + 6] = b->line[line][x + 7] = col;
+						col = black;
+					// b->line[line][x + 4] = b->line[line][x + 5] = b->line[line][x + 6] = b->line[line][x + 7] = col;
+					*ptr++ = col;
+					*ptr++ = col;
+					*ptr++ = col;
+					*ptr++ = col;
 				}
 				else
 				{
@@ -196,14 +276,16 @@ void drawline(int line)
 					{
 						for (xx = 0; xx < 8; xx++)
 						{
-							b->line[line][x + xx] = textcol[(((fontdata[chr] >> (xx ^ 7)) & 1) ^ 1) | css];
+						  // b->line[line][x + xx] = textcol[(((fontdata[chr] >> (xx ^ 7)) & 1) ^ 1) | css];
+						  *ptr++ = textcol[(((fontdata[chr] >> (xx ^ 7)) & 1) ^ 1) | css];
 						}
 					}
 					else
 					{
 						for (xx = 0; xx < 8; xx++)
 						{
-							b->line[line][x + xx] = textcol[((fontdata[chr] >> (xx ^ 7)) & 1) | css];
+						  //b->line[line][x + xx] = textcol[((fontdata[chr] >> (xx ^ 7)) & 1) | css];
+						  *ptr++ = textcol[((fontdata[chr] >> (xx ^ 7)) & 1) | css]; 
 						}
 					}
 				}
@@ -226,8 +308,13 @@ void drawline(int line)
 				temp = fetcheddat[x >> 3];
 				for (xx = 0; xx < 16; xx += 4)
 				{
-					b->line[line][x + xx] = b->line[line][x + xx + 1] = b->line[line][x + xx + 2] = b->line[line][x + xx + 3] = semigrcol[(temp >> 6) | (css << 1)];
-					temp <<= 2;
+				  //b->line[line][x + xx] = b->line[line][x + xx + 1] = b->line[line][x + xx + 2] = b->line[line][x + xx + 3] = semigrcol[(temp >> 6) | (css << 1)];
+				  col = semigrcol[(temp >> 6) | (css << 1)];
+				  *ptr++ = col;
+				  *ptr++ = col;
+				  *ptr++ = col;
+				  *ptr++ = col;
+				  temp <<= 2;
 				}
 			}
 			
@@ -243,8 +330,11 @@ void drawline(int line)
 				temp = fetcheddat[x >> 3];
 				for (xx = 0; xx < 16; xx += 2)
 				{
-					b->line[line][x + xx] = b->line[line][x + xx + 1] = (temp & 0x80) ? grcol[css | 1] : grcol[css];
-					temp <<= 1;
+				  // b->line[line][x + xx] = b->line[line][x + xx + 1] = (temp & 0x80) ? grcol[css | 1] : grcol[css];
+				  col = (temp & 0x80) ? grcol[css | 1] : grcol[css];
+				  *ptr++ = col;
+				  *ptr++ = col;
+				  temp <<= 1;
 				}
 			}
 			
@@ -262,8 +352,11 @@ void drawline(int line)
 				temp = fetcheddat[x >> 3];
 				for (xx = 0; xx < 8; xx += 2)
 				{
-					b->line[line][x + xx] = b->line[line][x + xx + 1] = semigrcol[(temp >> 6) |(css << 1)];
-					temp <<= 2;
+				  // b->line[line][x + xx] = b->line[line][x + xx + 1] = semigrcol[(temp >> 6) |(css << 1)];
+				  col = semigrcol[(temp >> 6) |(css << 1)];
+				  *ptr++ = col;
+				  *ptr++ = col;
+				  temp <<= 2;
 				}
 			}
 
@@ -280,8 +373,11 @@ void drawline(int line)
 				temp = fetcheddat[x >> 3];
 				for (xx = 0; xx < 16; xx += 2)
 				{
-					b->line[line][x + xx] = b->line[line][x + xx + 1] = (temp & 0x80) ? grcol[css | 1] : grcol[css];
-					temp <<= 1;
+				  // b->line[line][x + xx] = b->line[line][x + xx + 1] = (temp & 0x80) ? grcol[css | 1] : grcol[css];;
+				  col = (temp & 0x80) ? grcol[css | 1] : grcol[css];;
+				  *ptr++ = col;
+				  *ptr++ = col;
+				  temp <<= 1;
 				}
 			}
 
@@ -297,8 +393,11 @@ void drawline(int line)
 				temp = fetcheddat[x >> 3];
 				for (xx = 0; xx < 8; xx += 2)
 				{
-					b->line[line][x + xx] = b->line[line][x + xx + 1] = semigrcol[(temp >> 6) | (css << 1)];
-					temp <<= 2;
+				  // b->line[line][x + xx] = b->line[line][x + xx + 1] = semigrcol[(temp >> 6) | (css << 1)];
+				  col = semigrcol[(temp >> 6) | (css << 1)];
+				  *ptr++ = col;
+				  *ptr++ = col;
+				  temp <<= 2;
 				}
 			}
 
@@ -315,8 +414,11 @@ void drawline(int line)
 				temp = fetcheddat[x >> 3];
 				for (xx = 0; xx < 16; xx += 2)
 				{
-					b->line[line][x + xx] = b->line[line][x + xx + 1] = (temp & 0x80) ? grcol[css | 1] : grcol[css];
-					temp <<= 1;
+				  // b->line[line][x + xx] = b->line[line][x + xx + 1] = (temp & 0x80) ? grcol[css | 1] : grcol[css];
+				  col = (temp & 0x80) ? grcol[css | 1] : grcol[css];
+				  *ptr++ = col;
+				  *ptr++ = col;
+				  temp <<= 1;
 				}
 			}
 
@@ -332,8 +434,11 @@ void drawline(int line)
 				temp = fetcheddat[x >> 3];
 				for (xx = 0; xx < 8; xx += 2)
 				{
-					b->line[line][x + xx] = b->line[line][x + xx + 1] = semigrcol[(temp >> 6) | (css << 1)];
-					temp <<= 2;
+				  // b->line[line][x + xx] = b->line[line][x + xx + 1] = semigrcol[(temp >> 6) | (css << 1)];
+				  col = semigrcol[(temp >> 6) | (css << 1)];
+				  *ptr++ = col;
+				  *ptr++ = col;
+				  temp <<= 2;
 				}
 			}
 
@@ -350,8 +455,10 @@ void drawline(int line)
 				temp = fetcheddat[x >> 3];
 				for (xx = 0; xx < 8; xx++)
 				{
-					b->line[line][x + xx] = (temp & 0x80) ? grcol[css | 1] : grcol[css];
-					temp <<= 1;
+				  // b->line[line][x + xx] = (temp & 0x80) ? grcol[css | 1] : grcol[css];
+				  // al_put_pixel(x + xx, line, (temp & 0x80) ? grcol[css | 1] : grcol[css]);
+				  *ptr++ = (temp & 0x80) ? grcol[css | 1] : grcol[css];
+				  temp <<= 1;
 				}
 			}
 
@@ -372,35 +479,47 @@ void drawline(int line)
 
 	if (line == 192)
 	{
-		startblit();
+	  // startblit();
 		frmcount++;
 		fskipcount++;
 
 		if (savescrshot)
 		{
 			savescrshot = 0;
+			/*
 			if (colourboard)
 				save_bmp(scrshotname, b, atompal);
 			else
 				save_bmp(scrshotname, b, monopal);
+			*/
 		}
 
 		if ((!(tapeon && fasttape) && fskipcount >= fskipmax) || frmcount == 60)
 		{
 			fskipcount = 0;
-			blit(b, b2, 0, 0, 0, 0, 256, 192);
+
+
 			if (fullscreen)
 			{
-				stretch_blit(b2, screen, 0, 0, 256, 192, 0, 0, 1024, 768);
-				if (tapeon)
-					rectfill(screen, 1000, 0, 1023, 8, makecol(255, 0, 0));
+			  // stretch_blit(b2, screen, 0, 0, 256, 192, 0, 0, 1024, 768);
+			  // if (tapeon)
+			  //	rectfill(screen, 1000, 0, 1023, 8, makecol(255, 0, 0));
 			}
 			else
 			{
-				stretch_blit(b2, screen, 0, 0, 256, 192, 0, 0, winsizex, winsizey-1);
-				if (tapeon)
-					rectfill(screen, winsizex - 12, 0, winsizex, 4, makecol(255, 0, 0));
+			  // stretch_blit(b2, screen, 0, 0, 256, 192, 0, 0, winsizex, winsizey-1);
+			  //	if (tapeon)
+			  //		rectfill(screen, winsizex - 12, 0, winsizex, 4, makecol(255, 0, 0));
 			}
+
+			al_unlock_bitmap(b);
+			al_set_target_bitmap(al_get_backbuffer(display));
+			// al_draw_bitmap(b, 0, 0, 0);
+			al_draw_scaled_bitmap(b, 0, 0, screenW, screenH, scaleX, scaleY, scaleW, scaleH, 0);
+			al_flip_display();
+			al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
+			al_set_target_bitmap(b);
+
 
 			frmcount = 0;
 		}
@@ -436,6 +555,10 @@ void drawline(int line)
 		}
 	}
 
+	//double t2 = al_get_time();
+	//debuglog("drawing line took %d\n", (int) (1000000.0 * (t2 - t1)));
+
+
 //        sndbuffer[line]=(speaker)?255:0;
 }
 
@@ -453,23 +576,7 @@ void enterfullscreen()
                 rpclog("Enter fullscreen end\n");
                 return;
         }*/
-	#ifdef WIN32
-	destroy_bitmap(b2);
-	#endif
-
-	set_color_depth(depth);
-	set_gfx_mode(GFX_AUTODETECT_FULLSCREEN, 1024, 768, 0, 0);
-
-	#ifdef WIN32
-	b2 = create_video_bitmap(256, 192);
-	#endif
-
-	set_color_depth(8);
 	updatepal();
-//	if (colourboard)
-//		set_palette(atompal);
-//	else
-//		set_palette(monopal);
 }
 
 void leavefullscreen()
@@ -479,34 +586,25 @@ void leavefullscreen()
                 openglreinit();
                 return;
         }*/
-	#ifdef WIN32
-	destroy_bitmap(b2);
-	#endif
 
-	set_color_depth(depth);
+	//	set_color_depth(depth);
+	//#ifdef WIN32
+	//	set_gfx_mode(ALLEGRO_WINDOWED, 2048, 2048, 0, 0);
+	//#else
+	//	set_gfx_mode(ALLEGRO_WINDOWED, 512, 384, 0, 0);
+	//#endif
 
-#ifdef WIN32
-	set_gfx_mode(GFX_AUTODETECT_WINDOWED, 2048, 2048, 0, 0);
-#else
-	set_gfx_mode(GFX_AUTODETECT_WINDOWED, 512, 384, 0, 0);
-#endif
-
-	#ifdef WIN32
-	b2 = create_video_bitmap(256, 192);
-	#endif
-
-	set_color_depth(8);
+	//set_color_depth(8);
 	updatepal();
-//	if (colourboard)
-//		set_palette(atompal);
-//	else
-//		set_palette(monopal);
+
 	updatewindowsize(512, 384);
 }
 
 void clearscreen()
 {
-	clear(screen);
-//        clear(b);
-	clear(b2);
+  al_set_target_bitmap(al_get_backbuffer(display));
+  al_clear_to_color(al_map_rgb(0, 0, 0));
+
+  al_set_target_bitmap(b);
+  al_clear_to_color(al_map_rgb(0, 0, 0));  
 }

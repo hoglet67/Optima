@@ -237,6 +237,7 @@ void debuglog(char *format, ...)
 #else
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include "atom.h"
 
@@ -254,6 +255,14 @@ void startdebug()
 
 void debuglog(char *format, ...)
 {
+	char buf[256];
+
+	va_list ap;
+	va_start(ap, format);
+	vsprintf(buf, format, ap);
+	va_end(ap);
+
+	debugout(buf);
 }
 #endif
 

@@ -9,7 +9,9 @@
 
 char exedir[MAXPATH+1];
 
-int colourboard = 1;
+extern int quited;
+
+int colourboard = 0;
 int sndddnoise = 1;
 
 // SID
@@ -52,14 +54,9 @@ char filelist[256][17];
 int filelistsize;
 int filepos[256];
 
-int drawscr;
+int drawscr = 0;
 int ddframes = 0;
 
-void scrupdate()
-{
-	ddframes++;
-	drawscr++;
-}
 
 void atom_reset(int power_on)
 {
@@ -87,14 +84,20 @@ void atom_reset(int power_on)
 	debuglog("atom_reset():done\n");
 
       // Init joystick
-      install_joystick(JOY_TYPE_AUTODETECT);
+      // install_joystick(JOY_TYPE_AUTODETECT);
 
 }
+
+ALLEGRO_TIMER* timer;
+ALLEGRO_EVENT_QUEUE* eventQueue;
 
 void atom_init(int argc, char **argv)
 {
 	int c;
 	int tapenext = 0, discnext = 0;
+
+	debuglog("atom_init() done\n");
+
 
 	for (c = 1; c < argc; c++)
 	{
@@ -155,66 +158,135 @@ void atom_init(int argc, char **argv)
 	reset8271();
 	resetvia();
 	#ifndef WIN32
-	install_keyboard();
+	al_install_keyboard();
 	#endif
 	//install_mouse();
-	install_timer();
-	install_int_ex(scrupdate, BPS_TO_TIMER(300));
+
+	
+	// install_timer();
+	// install_int_ex(scrupdate, BPS_TO_TIMER(300));
+
+
+
 	inital();
 	sid_init();
 	sid_settype(sidmethod, cursid);
-	loaddiscsamps();
+	// loaddiscsamps();
 	loaddisc(0, discfns[0]);
 	loaddisc(1, discfns[1]);
 	atom_reset(1);
+
+
+	timer = al_create_timer(ALLEGRO_BPS_TO_SECS(colourboard ? 50 : 60));	
+	eventQueue = al_create_event_queue();
+	al_register_event_source(eventQueue, al_get_timer_event_source(timer));
+	al_start_timer(timer);
+
+
+	debuglog("atom_init() done\n");
 }
 
 void changetimerspeed(int i)
 {
-	remove_int(scrupdate);
-	install_int_ex(scrupdate, BPS_TO_TIMER(i * 6));
+  // remove_int(scrupdate);
+  //	install_int_ex(scrupdate, BPS_TO_TIMER(i * 6));
+  al_set_timer_speed(timer, ALLEGRO_BPS_TO_SECS(i));
 }
 
 int oldf12 = 0;
+int count = 0;
+int skipped = 0;
+
 void atom_run()
 {
-	if ((drawscr > 0) || (tapeon && fasttape))
-	{
-		if (colourboard)
-			exec6502(312, 64);
-		else
-			exec6502(262, 64);
-			
-		poll_keyboard();
-		if (tapeon && fasttape)
-			drawscr = 0;
-		else
-			drawscr -= (colourboard) ? 6 : 5;
+
+  bool need_redraw = false;
+
+  ALLEGRO_EVENT e;
+  al_wait_for_event(eventQueue, &e);
+  //debuglog("atom_run() event type = %d\n", e.type;)
+  count++;
+
+  // if (count == 60 * 30) {
+  //quited = true;
+  //}
+
+  if (e.type == ALLEGRO_EVENT_TIMER) {
+
+    need_redraw = true;
+    ddframes++;
+    drawscr++;
+  } else {
+    debuglog("atom_run() unexpected event type = %d\n", e.type);
+  }
+
+
+  if (need_redraw) {
+
+    if (al_event_queue_is_empty(eventQueue)) {
+
+      need_redraw=false;
+
+      ALLEGRO_KEYBOARD_STATE key_state;
+      int newf12;
+    
+      //debuglog("before exec6502");
+
+      double t1 = al_get_time();
+
+      exec6502(colourboard ? 312 : 262, 64, true, true);
+
+      //      if (count % 25 == 0) {
+      //double t2 = al_get_time();
+      //	debuglog("drawing frame %d took %d us\n", count, (int) (1000000.0 * (t2 - t1)));
+      // }
+
+      // debuglog("after exec6502");
+	
+      if (tapeon && fasttape)
+	drawscr = 0;
+      else
+	drawscr -= 1; //(colourboard) ? 6 : 5;
 		
-		if (drawscr > 25)
-			drawscr = 0;
+      if (drawscr > 25)
+	drawscr = 0;
 		
-		if (ddframes >= 25)
-		{
-			ddframes -= 25;
-			mixddnoise();
-		}
+      if (ddframes >= 25) {
+	ddframes -= 25;
+	// mixddnoise();
+      }
+
+      al_get_keyboard_state(&key_state);
+      newf12 = al_key_down(&key_state, ALLEGRO_KEY_F12);
 		
-		if (key[KEY_F12] && !oldf12)
-			atom_reset(0);
+      if (newf12 && !oldf12)
+	atom_reset(0);
 		
-		oldf12 = key[KEY_F12];
-	}
-	else
-		rest(1);
+      oldf12 = newf12;
+
+    } else {
+      skipped++;
+    }
+
+    if (count == 300) {
+      debuglog("skipped %d out of %d frames (%.2f)%\n", skipped, count, 100.0 * skipped / count);
+      count = 0;
+      skipped = 0;
+    }
+
+
+      
+  } 
+
+  //debuglog("atom_run() done\n");
 }
 
 void atom_exit()
 {
-	saveconfig();
-	closeddnoise();
-	FinalizeMMC();
-//        dumpregs();
-//        dumpram();
+  saveconfig();
+  //	closeddnoise();
+  FinalizeMMC();
+  //        dumpregs();
+  //        dumpram();
 }
 

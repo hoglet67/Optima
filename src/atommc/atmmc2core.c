@@ -275,18 +275,17 @@ void at_process(void)
 			if (joyst)
 			{
 			  JOYSTICK = 255;
-            	  poll_joystick();
-
-			  if (joy_right)
-			     JOYSTICK ^= 1;
-			  if (joy_left)
-			     JOYSTICK ^= 2;
-			  if (joy_down)
-			     JOYSTICK ^= 4;
-			  if (joy_up)
-			     JOYSTICK ^= 8;
-			  if (joy[0].button[0].b) // Fire
-			     JOYSTICK ^= 16;
+			  //poll_joystick();
+			  //if (joy_right)
+			  // JOYSTICK ^= 1;
+			  //if (joy_left)
+			  //   JOYSTICK ^= 2;
+			  //if (joy_down)
+			  //   JOYSTICK ^= 4;
+			  //if (joy_up)
+			  //   JOYSTICK ^= 8;
+			  //if (joy[0].button[0].b) // Fire
+			  //   JOYSTICK ^= 16;
 
               	  WriteDataPort(JOYSTICK);
 			}

@@ -57,16 +57,34 @@ int dir_exists(char *path)
 	return result;
 }
 
-void load_config_string(char *label,
-					    char *dest)
+void load_config_string(ALLEGRO_CONFIG *cfg, char *section, char *label, char *dest)
 {
-	char *strtmp;
-	
-	strtmp = (char*)get_config_string(NULL, label , NULL);
+	char *strtmp;	
+	strtmp = (char*)al_get_config_value(cfg, section, label);
 	if (strtmp)
 		strcpy(dest, strtmp);
 	else
 		dest[0] = 0;
+}
+
+void save_config_string(ALLEGRO_CONFIG *cfg, char *section, char *label, char *value)
+{
+  al_set_config_value(cfg, section, label, value);
+}
+
+int load_config_int(ALLEGRO_CONFIG *cfg, char *section, char *label, int deflt) {
+  char *val = al_get_config_value(cfg, section, label);
+  if (val) {
+    return atoi(val);
+  } else {
+    return deflt;
+  }
+}
+
+void save_config_int(ALLEGRO_CONFIG *cfg, char *section, char *label, int value) {
+  char sValue[30];
+  sprintf(sValue, "%d", value);
+  al_set_config_value(cfg, section, label, sValue);
 }
 
 void loadconfig()
@@ -74,45 +92,48 @@ void loadconfig()
 	int c;
 	char s[256];
 	char *p;
+	ALLEGRO_CONFIG *cfg;
 
 	sprintf(s, "%satom.cfg", exedir);
-	set_config_file(s);
+	cfg = al_load_config_file(s);	
 	
-	
-	load_config_string(LABEL_DISC0,discfns[0]);
-	load_config_string(LABEL_DISC1,discfns[1]);
-	load_config_string(LABEL_MMC_PATH,BaseMMCPath);
+	load_config_string(cfg, NULL, LABEL_DISC0,discfns[0]);
+	load_config_string(cfg, NULL, LABEL_DISC1,discfns[1]);
+	load_config_string(cfg, NULL, LABEL_MMC_PATH,BaseMMCPath);
+	//	strcpy(&discfns[0], al_get_config_value(cfg, NULL, LABEL_DISC0));
+	//strcpy(&discfns[1], al_get_config_value(cfg, NULL, LABEL_DISC1));
+	//strcpy(BaseMMCPath, al_get_config_value(cfg, NULL, LABEL_MMC_PATH));
 
 	// check to see if the mmc path is valid and exists, else set to
 	// the default.
 	if((0==strlen(BaseMMCPath)) || (!dir_exists(BaseMMCPath)))
 		sprintf(BaseMMCPath,"%s%s",exedir,DEF_MMC_DIR);
 	
-	colourboard 	= get_config_int(NULL, LABEL_COLOUR, 1);
-	bbcmode 		= get_config_int(NULL, LABEL_BBCBASIC, 0);
-	snow 			= get_config_int(NULL, LABEL_SNOW, 0);
-	ramrom_enable 	= get_config_int(NULL, LABEL_RAMROM, 0);
-	RR_jumpers 		= get_config_int(NULL, LABEL_RAMROMJMP, 0);
+	colourboard 	= load_config_int(cfg, NULL, LABEL_COLOUR, 1);
+	bbcmode 		= load_config_int(cfg, NULL, LABEL_BBCBASIC, 0);
+	snow 			= load_config_int(cfg, NULL, LABEL_SNOW, 0);
+	ramrom_enable 	= load_config_int(cfg, NULL, LABEL_RAMROM, 0);
+	RR_jumpers 		= load_config_int(cfg, NULL, LABEL_RAMROMJMP, 0);
 
-	fasttape 		= get_config_int(NULL, LABEL_FASTTAPE, 0);
+	fasttape 		= load_config_int(cfg, NULL, LABEL_FASTTAPE, 0);
 
-	defaultwriteprot = get_config_int(NULL, LABEL_DEF_WP, 1);
-	ddvol 			= get_config_int(NULL, LABEL_DDVOL, 2);
-	ddtype 			= get_config_int(NULL, LABEL_DDTYPE, 0);
+	defaultwriteprot = load_config_int(cfg, NULL, LABEL_DEF_WP, 1);
+	ddvol 			= load_config_int(cfg, NULL, LABEL_DDVOL, 2);
+	ddtype 			= load_config_int(cfg, NULL, LABEL_DDTYPE, 0);
 
-	spon 			= get_config_int(NULL, LABEL_SND_INT, 1);
-	tpon 			= get_config_int(NULL, LABEL_SND_TAPE, 0);
-	sndddnoise 		= get_config_int(NULL, LABEL_SND_DD, 1);
+	spon 			= load_config_int(cfg, NULL, LABEL_SND_INT, 1);
+	tpon 			= load_config_int(cfg, NULL, LABEL_SND_TAPE, 0);
+	sndddnoise 		= load_config_int(cfg, NULL, LABEL_SND_DD, 1);
 
 	// Joystick support
-	joyst			= get_config_int(NULL, LABEL_JOYSTICK, 0);
+	joyst			= load_config_int(cfg, NULL, LABEL_JOYSTICK, 0);
 
-	debug_on_brk	= get_config_int(NULL, LABEL_DEBUG_BRK, 0);
+	debug_on_brk	= load_config_int(cfg, NULL, LABEL_DEBUG_BRK, 0);
 
 	for (c = 0; c < 128; c++)
 	{
 		sprintf(s, "%s%03i", LABEL_KEY_DEF, c);
-		keylookup[c] = get_config_int(LABEL_USER_KBD, s, c);
+		keylookup[c] = load_config_int(cfg, LABEL_USER_KBD, s, c);
 	}
 }
 
@@ -121,38 +142,42 @@ void saveconfig()
 	int c;
 	char s[256];
 
-	sprintf(s, "%satom.cfg", exedir);
-	set_config_file(s);
+	ALLEGRO_CONFIG *cfg = al_create_config();
+ 
+	save_config_string(cfg, NULL, LABEL_DISC0, discfns[0]);
+	save_config_string(cfg, NULL, LABEL_DISC1, discfns[1]);
+	save_config_string(cfg, NULL, LABEL_MMC_PATH,BaseMMCPath);
 
-	set_config_string(NULL, LABEL_DISC0, discfns[0]);
-	set_config_string(NULL, LABEL_DISC1, discfns[1]);
-	set_config_string(NULL, LABEL_MMC_PATH,BaseMMCPath);
-
-	set_config_int(NULL, LABEL_COLOUR, colourboard);
-	set_config_int(NULL, LABEL_BBCBASIC, bbcmode);
-	set_config_int(NULL, LABEL_SNOW, snow);
-	set_config_int(NULL, LABEL_RAMROM,ramrom_enable);
-	set_config_int(NULL, LABEL_RAMROMJMP,RR_jumpers);
+	save_config_int(cfg, NULL, LABEL_COLOUR, colourboard);
+	save_config_int(cfg, NULL, LABEL_BBCBASIC, bbcmode);
+	save_config_int(cfg, NULL, LABEL_SNOW, snow);
+	save_config_int(cfg, NULL, LABEL_RAMROM,ramrom_enable);
+	save_config_int(cfg, NULL, LABEL_RAMROMJMP,RR_jumpers);
 	
 	// Joystick support
-	set_config_int(NULL, LABEL_JOYSTICK, joyst);
+	save_config_int(cfg, NULL, LABEL_JOYSTICK, joyst);
 	
-	set_config_int(NULL, LABEL_FASTTAPE, fasttape);
+	save_config_int(cfg, NULL, LABEL_FASTTAPE, fasttape);
 
-	set_config_int(NULL, LABEL_DEF_WP, defaultwriteprot);
+	save_config_int(cfg, NULL, LABEL_DEF_WP, defaultwriteprot);
 
-	set_config_int(NULL, LABEL_DDVOL, ddvol);
-	set_config_int(NULL, LABEL_DDTYPE, ddtype);
+	save_config_int(cfg, NULL, LABEL_DDVOL, ddvol);
+	save_config_int(cfg, NULL, LABEL_DDTYPE, ddtype);
 
-	set_config_int(NULL, LABEL_SND_INT, spon);
-	set_config_int(NULL, LABEL_SND_TAPE, tpon);
-	set_config_int(NULL, LABEL_SND_DD, sndddnoise);
+	save_config_int(cfg, NULL, LABEL_SND_INT, spon);
+	save_config_int(cfg, NULL, LABEL_SND_TAPE, tpon);
+	save_config_int(cfg, NULL, LABEL_SND_DD, sndddnoise);
 
-	set_config_int(NULL, LABEL_DEBUG_BRK, debug_on_brk);
+	save_config_int(cfg, NULL, LABEL_DEBUG_BRK, debug_on_brk);
 
 	for (c = 0; c < 128; c++)
 	{
 		sprintf(s, "%s%03i", LABEL_KEY_DEF, c);
-		set_config_int(LABEL_USER_KBD, s, keylookup[c]);
+		save_config_int(cfg, LABEL_USER_KBD, s, keylookup[c]);
 	}
+
+
+	sprintf(s, "%satom.cfg", exedir);
+	al_save_config_file(s, cfg);
+
 }

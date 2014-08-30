@@ -29,11 +29,20 @@ void cataddname(char *s)
 int main(int argc, char **argv)
 {
 	char *p;
+	int newf11;
+	ALLEGRO_KEYBOARD_STATE key_state;
 
-	allegro_init();
-	get_executable_name(exedir, 511);
-	p = get_filename(exedir);
-	p[0] = 0;
+	// al_init();
+
+	al_install_system(ALLEGRO_VERSION_INT, NULL);
+
+	//get_executable_name(exedir, 511);
+	//p = get_filename(exedir);
+	//p[0] = 0;
+	ALLEGRO_PATH *path = al_create_path(argv[0]);
+	al_set_path_filename(path, NULL);
+	strcpy(exedir, al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP));
+
 
 	loadconfig();
 
@@ -41,16 +50,19 @@ int main(int argc, char **argv)
 		writeprot[0] = writeprot[1] = 1;
 
 	atom_init(argc, argv);
-	install_keyboard();
+	al_install_keyboard();
 	while (!quited)
 	{
 		atom_run();
-		if (key[KEY_F11] && !oldf11)
+
+		al_get_keyboard_state(&key_state);
+		newf11 = al_key_down(&key_state, ALLEGRO_KEY_F11);
+		if (newf11 && !oldf11)
 		{
 			oldf11 = 1;
-			entergui();
+			// entergui();
 		}
-		oldf11 = key[KEY_F11];
+		oldf11 = newf11;
 	}
 	atom_exit();
 	return 0;
