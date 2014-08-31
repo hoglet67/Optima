@@ -1519,15 +1519,15 @@ opasm_rts:
 .macro BODY_SBC
 	tst %r11, #8		@ if (cpu->p & FLAG_D) do BCD arithmetic in a C function
 	bne .+80
-	tst %r11, #1			@ r1 = temp + (cpu->p & FLAG_C)?0:1;
-	addeq %r1, #1
 	sub %r2, %r7, %r1   	@ r2 = cpu->a - r1;
+	tst %r11, #1			@ r1 = temp + (cpu->p & FLAG_C)?0:1;
+	subeq %r2, #1
 	bic %r11, #0x41     	@ clear C and V flags
 	tst %r2, #256
 	orreq %r11, #1			@ set FLAG_C (ONLY IF RESULT DID *NOT* BORROW... THIS IS INVERSE TO ADC)
 	eor %r0, %r7, %r1		@ r0 = cpu->a ^ temp
 	lsls %r0, #24
-	bmi .+16
+	bpl .+16
 	eor %r0, %r7, %r2		@ r1 = cpu->a ^ result_of_addition
 	lsls %r0, #24
 	orrmi %r11, #0x40		@ set FLAG_V
