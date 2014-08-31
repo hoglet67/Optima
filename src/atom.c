@@ -211,10 +211,6 @@ void atom_run()
   //debuglog("atom_run() event type = %d\n", e.type;)
   count++;
 
-  // if (count == 60 * 30) {
-  //quited = true;
-  //}
-
   if (e.type == ALLEGRO_EVENT_TIMER) {
 
     need_redraw = true;
@@ -227,52 +223,43 @@ void atom_run()
 
   if (need_redraw) {
 
-    if (al_event_queue_is_empty(eventQueue)) {
+    int skip = !al_event_queue_is_empty(eventQueue);
 
-      need_redraw=false;
-
-      ALLEGRO_KEYBOARD_STATE key_state;
-      int newf12;
-    
-      //debuglog("before exec6502");
-
-      double t1 = al_get_time();
-
-      // Alse executes a frame's worth of 6502 code...
-      update_atom_display(colourboard ? 312 : 262);
-      // debuglog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
-
-      //      if (count % 25 == 0) {
-      //double t2 = al_get_time();
-      //	debuglog("drawing frame %d took %d us\n", count, (int) (1000000.0 * (t2 - t1)));
-      // }
-
-      // debuglog("after exec6502");
-	
-      if (tapeon && fasttape)
-	drawscr = 0;
-      else
-	drawscr -= 1; //(colourboard) ? 6 : 5;
-		
-      if (drawscr > 25)
-	drawscr = 0;
-		
-      if (ddframes >= 25) {
-	ddframes -= 25;
-	// mixddnoise();
-      }
-
-      al_get_keyboard_state(&key_state);
-      newf12 = al_key_down(&key_state, ALLEGRO_KEY_F12);
-		
-      if (newf12 && !oldf12)
-	atom_reset(0);
-		
-      oldf12 = newf12;
-
-    } else {
+    if (skip) {
       skipped++;
     }
+    need_redraw=false;
+
+    ALLEGRO_KEYBOARD_STATE key_state;
+    int newf12;
+        
+    double t1 = al_get_time();
+
+    // Alse executes a frame's worth of 6502 code...
+    update_atom_display(colourboard ? 312 : 262, skip);
+    // debuglog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
+
+    if (tapeon && fasttape)
+      drawscr = 0;
+    else
+      drawscr -= 1; //(colourboard) ? 6 : 5;
+		
+    if (drawscr > 25)
+      drawscr = 0;
+		
+    if (ddframes >= 25) {
+      ddframes -= 25;
+      // mixddnoise();
+    }
+
+    al_get_keyboard_state(&key_state);
+    newf12 = al_key_down(&key_state, ALLEGRO_KEY_F12);
+		
+    if (newf12 && !oldf12)
+      atom_reset(0);
+		
+    oldf12 = newf12;
+
 
     if (count == 300) {
       debuglog("skipped %d out of %d frames (%.2f)%\n", skipped, count, 100.0 * skipped / count);
@@ -280,8 +267,6 @@ void atom_run()
       skipped = 0;
     }
 
-
-      
   } 
 
   //debuglog("atom_run() done\n");

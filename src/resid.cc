@@ -46,8 +46,8 @@ void sid_init()
         psid->sid->get_filter().set_distortion_properties(0.f, 0.f, 0.f);
         psid->sid->get_filter().set_type4_properties(6.55f, 20.0f);
 
-        psid->sid->enable_filter(true);
-        psid->sid->enable_external_filter(true);
+        psid->sid->enable_filter(false);
+        psid->sid->enable_external_filter(false);
 
         psid->sid->reset();
         

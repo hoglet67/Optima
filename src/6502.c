@@ -1130,21 +1130,22 @@ uint8_t* load_cpu(uint8_t* p)
 }
 
 
-void update_atom_display(int linenum)
+void update_atom_display(int linenum, int skip)
 {
   int lines;
   int i;
-  for (lines = 0; lines < linenum; lines++)
+  for (lines = 0; lines < linenum; lines+=2)
     {
-      if (lines < 262 || lines == 311) {
+      // If we are falling behind, skip the display updating
+      if (!skip && (lines < 262 || lines == 310)) {
 	drawline(lines);
+	drawline(lines+1);
       }
-
-      //      for (i = 0; i < 64; i++) {
-	exec6502();	
-	//	debuglog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
-	// }
-
+      // Execute's 128 cycles worth of instructions
+      exec6502();
+      // Generate 128 cycles with of sound (4 samples at 31250Hz)
       pollsound();
+      // Update the via, etc
+      do_poll(the_cpu, 128);
     }
 }

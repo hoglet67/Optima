@@ -61,7 +61,7 @@ exec6502:
     @ update cpu->cycles. Note the constant value 40000 cannot be encoded and has to be ldr'd indirectly.
     ldr  %r0,[%r4, #24]
 //    ldr  %r1, =40000
-    ldr  %r1, =64
+    ldr  %r1, =128
     add  %r0, %r0, %r1
     str  %r0,[%r4, #24]
 
@@ -193,7 +193,7 @@ no_interrupt:
 	str  %r0,[%r4, #38]
 do_poll_now:*/
 	mov %r0, %r4
- 	bl do_poll
+// 	bl do_poll
 no_poll_yet:
 
 	@ Loop back until cpu->cycles <=0

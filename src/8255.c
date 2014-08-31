@@ -248,25 +248,46 @@ void receive(uint8_t dat)
 
 void pollsound()
 {
-	int16_t temp = 0;
+	int16_t temp[2];
+	temp[0] = 0;
+	temp[1] = 0;
+	//	temp[2] = 0;
+	//	temp[3] = 0;
 
 	if (sndatomsid)
 	{
-//		sid_fillbuf(&sndbuffer[sndpos << 1],2);
-		sid_fillbuf(&temp,2);
+		sid_fillbuf(&temp[0],2);
+		sid_fillbuf(&temp[1],2);
+		//		sid_fillbuf(&temp[2],2);
+		//		sid_fillbuf(&temp[3],2);
 	}
 
-	if (spon)
-		temp += (speaker) ? 4095 : -4096;
-		
-        if (tpon)
-		temp += (tapedat) ? 2047 : -2048;
-
-	if (0!=temp)
-	{
-		sndbuffer[sndpos++] = temp;
-		sndbuffer[sndpos++] = temp;
+	  
+	if (spon) {
+		temp[0] += (speaker) ? 4095 : -4096;
+		temp[1] += (speaker) ? 4095 : -4096;
+		//		temp[2] += (speaker) ? 4095 : -4096;
+		//		temp[3] += (speaker) ? 4095 : -4096;
 	}
+
+        if (tpon) {
+		temp[0] += (tapedat) ? 2047 : -2048;
+		temp[1] += (tapedat) ? 2047 : -2048;
+		//		temp[2] += (tapedat) ? 2047 : -2048;
+		//		temp[3] += (tapedat) ? 2047 : -2048;
+	}
+
+	//	if (0!=temp1 || 0!=temp2)
+	//	{
+		sndbuffer[sndpos++] = temp[0];
+		sndbuffer[sndpos++] = temp[0];
+		sndbuffer[sndpos++] = temp[1];
+		sndbuffer[sndpos++] = temp[1];
+		//		sndbuffer[sndpos++] = temp[2];
+		//		sndbuffer[sndpos++] = temp[2];
+		//		sndbuffer[sndpos++] = temp[3];
+		//		sndbuffer[sndpos++] = temp[3];
+		//	}
 
 	if (sndpos >= (312 * 2 * 5))
 	{
