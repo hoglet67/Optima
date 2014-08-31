@@ -8,7 +8,6 @@
 #include "atom.h"
 
 int quited = 0;
-extern int oldf11;
 
 void startblit()
 {
@@ -54,15 +53,12 @@ int main(int argc, char **argv)
 	while (!quited)
 	{
 		atom_run();
-
+		// Exit if F4 is pressed
 		al_get_keyboard_state(&key_state);
-		newf11 = al_key_down(&key_state, ALLEGRO_KEY_F11);
-		if (newf11 && !oldf11)
+		if (al_key_down(&key_state, ALLEGRO_KEY_F4))
 		{
-			oldf11 = 1;
-			// entergui();
+			quited = 1;
 		}
-		oldf11 = newf11;
 	}
 	atom_exit();
 	return 0;
