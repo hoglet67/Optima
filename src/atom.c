@@ -72,10 +72,6 @@ void atom_reset(int power_on)
 		the_cpu->mem[9] = rand();
 		the_cpu->mem[10] = rand();
 		the_cpu->mem[11] = rand();
-		
-		// Clear BBC basic workspace.
-		if(bbcmode)
-			memset(&the_cpu->mem[0], 0, 0x10000);
 	}
 	resetvia();
 	sid_reset();

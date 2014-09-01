@@ -24,36 +24,27 @@ int RR_jumpers	= 0;
 M6502 acpu;
 M6502* the_cpu = &acpu;
 
-//uint8_t ram_fe30,ram_fe34;
-//uint8_t* roms;
+#define ROMS_SIZE 0x20000
 
+uint8_t *roms;
 
-//uint8_t acccon;
 int otherstuffcount=0;
-//int romsel;
-//int FEslowdown[8]={1,0,1,1,0,0,1,0};
-
-
-
 
 void initmem()
 {
-  //	int c;
 
-	the_cpu->mem = (uint8_t*)malloc(0x10000);
+  the_cpu->mem = (uint8_t*)malloc(0x10000);
+  memset(the_cpu->mem, 0, 0x10000);
+
+  roms = (uint8_t*)malloc(ROMS_SIZE);
 	
-	memset(the_cpu->mem, 0, 0x10000);
-	
-	//	for (c = 0; c < 0x100; c++)
-	  //		memstat[c] = 2;
-	
-	the_cpu->mem[8] = rand() & 255;
-	the_cpu->mem[9] = rand() & 255;
-	the_cpu->mem[10] = rand() & 255;
-	the_cpu->mem[11] = rand() & 255;
+  the_cpu->mem[8] = rand() & 255;
+  the_cpu->mem[9] = rand() & 255;
+  the_cpu->mem[10] = rand() & 255;
+  the_cpu->mem[11] = rand() & 255;
 }
 
-void load_rom(char *Name, int Size, int	Offset)
+void load_rom(char *Name, int Size, uint8_t *mem, int Offset)
 {
 	FILE    *RomFile;
 	int 	bytes;
@@ -63,7 +54,7 @@ void load_rom(char *Name, int Size, int	Offset)
 	RomFile = fopen(Name, "rb");
 	if(RomFile!=NULL)
 	{
-		bytes = fread(&the_cpu->mem[Offset], 1, Size, RomFile);
+		bytes = fread(mem + Offset, 1, Size, RomFile);
 		fclose(RomFile);
 
 		rpclog("bytes read %X\n", bytes);
@@ -74,11 +65,23 @@ void load_rom(char *Name, int Size, int	Offset)
 
 void loadroms()
 {
-	load_rom("roms/akernel_patched.rom",	ROM_SIZE_ATOM,          0xf000);
-	load_rom("roms/atommc2.rom",            ROM_SIZE_ATOM,          0xe000);
-	load_rom("roms/afloat_patched.rom",     ROM_SIZE_ATOM,          0xd000);
-	load_rom("roms/abasic.rom",             ROM_SIZE_ATOM,          0xc000);
-	load_rom("roms/axr1.rom",               ROM_SIZE_ATOM,          0xa000);
+
+  if (ramrom_enable) {
+    load_rom("roms/128K_pic.rom",	    ROMS_SIZE ,           roms,         0x0000);
+    if (bbcmode) {
+      memcpy(the_cpu->mem + 0x7000, roms + 0x19000,  ROM_SIZE_ATOM);
+      memcpy(the_cpu->mem + 0xa000, roms + 0x1a000,  ROM_SIZE_ATOM);
+      memcpy(the_cpu->mem + 0xc000, roms + 0x1c000,  4 * ROM_SIZE_ATOM);
+    } else {
+      memcpy(the_cpu->mem + 0xc000, roms + 0x10000,  4 * ROM_SIZE_ATOM);
+    }
+  } else {
+    load_rom("roms/akernel_patched.rom",    ROM_SIZE_ATOM,        the_cpu->mem, 0xf000);
+    load_rom("roms/atommc2.rom",            ROM_SIZE_ATOM,        the_cpu->mem, 0xe000);
+    load_rom("roms/afloat_patched.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xd000);
+    load_rom("roms/abasic.rom",             ROM_SIZE_ATOM,        the_cpu->mem, 0xc000);
+    load_rom("roms/axr1.rom",               ROM_SIZE_ATOM,        the_cpu->mem, 0xa000);
+  }
 	//	load_rom("roms/atom_bbc_basic_os.rom",  ROM_SIZE_ATOM,          ROM_OFS_BBC_OS);
 	//	load_rom("roms/basic1.rom",             ROM_SIZE_BBC_BASIC, 	ROM_OFS_BBC_BASIC);
 	//	load_rom("roms/ramrom.rom",             RAM_ROM_SIZE,           ROM_OFS_RAMROM);
@@ -86,9 +89,18 @@ void loadroms()
 
 void set_rr_ptrs()
 {
+
+  if (ramrom_enable)
+    {
+      debuglog("RR_enables=%2X, RR_bankreg=%2X\n",RR_enables, RR_bankreg);
+      if (bbcmode) {
+	memcpy(the_cpu->mem + 0x6000, roms + 0x8000 + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
+      } else {
+	memcpy(the_cpu->mem + 0xa000, roms + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
+      }
+    }
+
 #if 0
-	if (ramrom_enable)
-	{
 		// Select what is mapped into $A000 block, this allows the 
 		// mapping of rom or ram into the utility block so that a 
 		// rom may be loaded from disk and then mapped in.
@@ -116,7 +128,6 @@ void set_rr_ptrs()
 			dosrom_ptr      = &rom[ROM_OFS_DOSROM];
 			akernel_ptr     = &rom[ROM_OFS_AKERNEL];
 		}
-	}
 #endif
 }
 
