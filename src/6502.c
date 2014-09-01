@@ -21,6 +21,9 @@ int RR_enables	= 0;
 int RR_jumpers	= 0;
 
 
+int last_RR_bankreg = -1;
+int last_RR_enables = -1;
+
 M6502 acpu;
 M6502* the_cpu = &acpu;
 
@@ -44,61 +47,46 @@ void initmem()
   the_cpu->mem[11] = rand() & 255;
 }
 
-void load_rom(char *Name, int Size, uint8_t *mem, int Offset)
-{
-	FILE    *RomFile;
-	int 	bytes;
-
-	rpclog("loading rom %s at %05X, size=%04X ", Name, Offset, Size);
-
-	RomFile = fopen(Name, "rb");
-	if(RomFile!=NULL)
-	{
-		bytes = fread(mem + Offset, 1, Size, RomFile);
-		fclose(RomFile);
-
-		rpclog("bytes read %X\n", bytes);
-	}
-	else
-		rpclog("Loading %s failed !\n",Name);
-}
-
-void loadroms()
-{
-
-  if (ramrom_enable) {
-    load_rom("roms/128K_pic.rom",	    ROMS_SIZE ,           roms,         0x0000);
-    if (bbcmode) {
-      memcpy(the_cpu->mem + 0x7000, roms + 0x19000,  ROM_SIZE_ATOM);
-      memcpy(the_cpu->mem + 0xa000, roms + 0x1a000,  ROM_SIZE_ATOM);
-      memcpy(the_cpu->mem + 0xc000, roms + 0x1c000,  4 * ROM_SIZE_ATOM);
-    } else {
-      memcpy(the_cpu->mem + 0xc000, roms + 0x10000,  4 * ROM_SIZE_ATOM);
-    }
-  } else {
-    load_rom("roms/akernel_patched.rom",    ROM_SIZE_ATOM,        the_cpu->mem, 0xf000);
-    load_rom("roms/atommc2.rom",            ROM_SIZE_ATOM,        the_cpu->mem, 0xe000);
-    load_rom("roms/afloat_patched.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xd000);
-    load_rom("roms/abasic.rom",             ROM_SIZE_ATOM,        the_cpu->mem, 0xc000);
-    load_rom("roms/axr1.rom",               ROM_SIZE_ATOM,        the_cpu->mem, 0xa000);
-  }
-	//	load_rom("roms/atom_bbc_basic_os.rom",  ROM_SIZE_ATOM,          ROM_OFS_BBC_OS);
-	//	load_rom("roms/basic1.rom",             ROM_SIZE_BBC_BASIC, 	ROM_OFS_BBC_BASIC);
-	//	load_rom("roms/ramrom.rom",             RAM_ROM_SIZE,           ROM_OFS_RAMROM);
-}
 
 void set_rr_ptrs()
 {
 
+
   if (ramrom_enable)
     {
-      debuglog("RR_enables=%2X, RR_bankreg=%2X\n",RR_enables, RR_bankreg);
-      if (bbcmode) {
-	memcpy(the_cpu->mem + 0x6000, roms + 0x8000 + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
-      } else {
-	memcpy(the_cpu->mem + 0xa000, roms + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
+
+      debuglog("ramrom_enable=%d, RR_enables=%2X, RR_bankreg=%2X\n", ramrom_enable, RR_enables, RR_bankreg);
+
+      int forcePage = 0;
+      // Has the beeb mode bit changed?
+      if ((RR_enables & 8) != (last_RR_enables & 8)) {
+	if (RR_enables & 8) {
+	  debuglog("loading bbc roms\n");
+	  memcpy(the_cpu->mem + 0x7000, roms + 0x19000,  ROM_SIZE_ATOM);
+	  memcpy(the_cpu->mem + 0xa000, roms + 0x1a000,  ROM_SIZE_ATOM);
+	  memcpy(the_cpu->mem + 0xc000, roms + 0x1c000,  4 * ROM_SIZE_ATOM);
+	} else {
+	  debuglog("loading atom roms\n");
+	  memcpy(the_cpu->mem + 0xc000, roms + 0x10000,  4 * ROM_SIZE_ATOM);
+	}
+	forcePage = 1;
       }
+
+      //Has the bank register changed?
+      if (forcePage || (RR_bankreg != last_RR_bankreg)) {
+	if (RR_enables & 8) {
+	  debuglog("paging bbc rom %d to 0x6000\n", RR_bankreg);
+	  memcpy(the_cpu->mem + 0x6000, roms + 0x8000 + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
+	} else {
+	  debuglog("paging atom rom %d to 0xA000\n", RR_bankreg);
+	  memcpy(the_cpu->mem + 0xa000, roms + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
+	}
+      }
+
+      last_RR_enables = RR_enables;
+      last_RR_bankreg = RR_bankreg;
     }
+}
 
 #if 0
 		// Select what is mapped into $A000 block, this allows the 
@@ -129,6 +117,42 @@ void set_rr_ptrs()
 			akernel_ptr     = &rom[ROM_OFS_AKERNEL];
 		}
 #endif
+
+void load_rom(char *Name, int Size, uint8_t *mem, int Offset)
+{
+	FILE    *RomFile;
+	int 	bytes;
+
+	rpclog("loading rom %s at %05X, size=%04X ", Name, Offset, Size);
+
+	RomFile = fopen(Name, "rb");
+	if(RomFile!=NULL)
+	{
+		bytes = fread(mem + Offset, 1, Size, RomFile);
+		fclose(RomFile);
+
+		rpclog("bytes read %X\n", bytes);
+	}
+	else
+		rpclog("Loading %s failed !\n",Name);
+}
+
+void loadroms()
+{
+
+  if (ramrom_enable) {
+    load_rom("roms/128K_pic.rom",	    ROMS_SIZE ,           roms,         0x0000);
+    set_rr_ptrs();
+  } else {
+    load_rom("roms/akernel_patched.rom",    ROM_SIZE_ATOM,        the_cpu->mem, 0xf000);
+    load_rom("roms/atommc2.rom",            ROM_SIZE_ATOM,        the_cpu->mem, 0xe000);
+    load_rom("roms/afloat_patched.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xd000);
+    load_rom("roms/abasic.rom",             ROM_SIZE_ATOM,        the_cpu->mem, 0xc000);
+    load_rom("roms/axr1.rom",               ROM_SIZE_ATOM,        the_cpu->mem, 0xa000);
+  }
+	//	load_rom("roms/atom_bbc_basic_os.rom",  ROM_SIZE_ATOM,          ROM_OFS_BBC_OS);
+	//	load_rom("roms/basic1.rom",             ROM_SIZE_BBC_BASIC, 	ROM_OFS_BBC_BASIC);
+	//	load_rom("roms/ramrom.rom",             RAM_ROM_SIZE,           ROM_OFS_RAMROM);
 }
 
 void reset_rom()
