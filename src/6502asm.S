@@ -9,6 +9,25 @@
 .text
 .global exec6502
 
+BASE=16
+XXX_0=BASE
+XXX_4=BASE + 4
+XXX_6=BASE + 6
+XXX_7=BASE + 7
+XXX_8=BASE + 8
+XXX_9=BASE + 9
+XXX_10=BASE + 10
+XXX_12=BASE + 12
+XXX_16=BASE + 16
+XXX_20=BASE + 20
+XXX_24=BASE + 24
+XXX_28=BASE + 28
+XXX_30=BASE + 30
+XXX_32=BASE + 32
+XXX_38=BASE + 38
+XXX_44=BASE + 44
+
+	
 @ This implementation keeps 6502 state entirely in ARM registers during exec6502(), in order to reduce memory accesses.
 @ We haven't yet exploited the performance gains because we are still calling do_poll() after every
 @ instruction (i.e. pushing 6502 state on the stack with every emulated instruction). A goal for future development
@@ -44,12 +63,12 @@
 
 .macro UPDATE_TAKEINT 	@ cpu->takeint=(cpu->interrupt && !(cpu->p & FLAG_I));
 	mov  %r1, #0
-	ldr  %r2, [%r4, #12]	@r2 = cpu->interrupt
+	ldr  %r2, [%r4, #XXX_12]	@r2 = cpu->interrupt
 	cmp  %r2, #0
 	beq  .+12
 	tstne  %r11, #4  		@ test the FLAG_I
 	moveq %r1, #1
-	str %r1, [%r4, #20]   	@cpu->take_int = r1
+	str %r1, [%r4, #XXX_20]   	@cpu->take_int = r1
 .endm
 
 exec6502:
@@ -59,20 +78,20 @@ exec6502:
 	ldr  %r4, =acpu
 
     @ update cpu->cycles. Note the constant value 40000 cannot be encoded and has to be ldr'd indirectly.
-    ldr  %r0,[%r4, #24]
+    ldr  %r0,[%r4, #XXX_24]
 //    ldr  %r1, =40000
     ldr  %r1, =128
     add  %r0, %r0, %r1
-    str  %r0,[%r4, #24]
+    str  %r0,[%r4, #XXX_24]
 
     @ load 6502 CPU state into ARM registers
-    ldr  %r5, [%r4] 		@ r5  = mem
-    ldrh %r6, [%r4, #4] 	@ r6  = PC
-    ldrb %r7, [%r4, #6] 	@ r7  = A
-    ldrb %r8, [%r4, #7] 	@ r8  = X
-    ldrb %r9, [%r4, #8] 	@ r9  = Y
-    ldrb %r10,[%r4, #9] 	@ r10 = S
-    ldrb %r11,[%r4, #10] 	@ r11 = P
+    ldr  %r5, [%r4, #XXX_0]	@ r5  = mem
+    ldrh %r6, [%r4, #XXX_4] 	@ r6  = PC
+    ldrb %r7, [%r4, #XXX_6] 	@ r7  = A
+    ldrb %r8, [%r4, #XXX_7] 	@ r8  = X
+    ldrb %r9, [%r4, #XXX_8] 	@ r9  = Y
+    ldrb %r10,[%r4, #XXX_9] 	@ r10 = S
+    ldrb %r11,[%r4, #XXX_10] 	@ r11 = P
 
     @loop
 loop:
@@ -84,13 +103,13 @@ loop:
 
 	@ PC triggers - if PC hits a known preset, update CPU state with it so Java layer can act appropriately
 	mov %r1, #1
-	ldrh %r0,[%r4, #30]
+	ldrh %r0,[%r4, #XXX_30]
 	cmp %r0, %r6
-	streqh %r1,[%r4, #28]
+	streqh %r1,[%r4, #XXX_28]
 	mov %r1, #2
-	ldrh %r0,[%r4, #32]
+	ldrh %r0,[%r4, #XXX_32]
 	cmp %r0, %r6
-	streqh %r1,[%r4, #28]
+	streqh %r1,[%r4, #XXX_28]
 
 	@ Get the opcode into r0 and update cpu->PC
 	ldrb %r0,[%r5,%r6]
@@ -118,21 +137,21 @@ loop:
 use_c_fn:
 	ldr  %r1, =fns
 	ldr  %r2, [%r1, %r0, lsl #2]
-    strh %r6, [%r4, #4] 	@  r6 = PC
-    strb %r7, [%r4, #6] 	@  r7 = A
-    strb %r8, [%r4, #7] 	@  r8 = X
-    strb %r9, [%r4, #8] 	@  r9 = Y
-    strb %r10,[%r4, #9] 	@ r10 = S
-    strb %r11,[%r4, #10] 	@ r11 = P
+    strh %r6, [%r4, #XXX_4] 	@  r6 = PC
+    strb %r7, [%r4, #XXX_6] 	@  r7 = A
+    strb %r8, [%r4, #XXX_7] 	@  r8 = X
+    strb %r9, [%r4, #XXX_8] 	@  r9 = Y
+    strb %r10,[%r4, #XXX_9] 	@ r10 = S
+    strb %r11,[%r4, #XXX_10] 	@ r11 = P
 
 	mov  %r0, %r4  	@ Sole parameter for C opcode functions is r0 = CPU*
 	blx %r2
-    ldrh %r6, [%r4, #4] 	@  r6 = PC
-    ldrb %r7, [%r4, #6] 	@  r7 = A
-    ldrb %r8, [%r4, #7] 	@  r8 = X
-    ldrb %r9, [%r4, #8] 	@  r9 = Y
-    ldrb %r10,[%r4, #9] 	@ r10 = S
-    ldrb %r11,[%r4, #10] 	@ r11 = P
+    ldrh %r6, [%r4, #XXX_4] 	@  r6 = PC
+    ldrb %r7, [%r4, #XXX_6] 	@  r7 = A
+    ldrb %r8, [%r4, #XXX_7] 	@  r8 = X
+    ldrb %r9, [%r4, #XXX_8] 	@  r9 = Y
+    ldrb %r10,[%r4, #XXX_9] 	@ r10 = S
+    ldrb %r11,[%r4, #XXX_10] 	@ r11 = P
 
 done_call:
 	tst  %r0, #0x80000000
@@ -146,19 +165,19 @@ already_updated_interrupts:
 done_interrupts:
 
 	@ Update interrupts
-	ldr %r1, [%r4, #16]  @ r1 = cpu->nmi
+	ldr %r1, [%r4, #XXX_16]  @ r1 = cpu->nmi
 	cmp %r1, #0
 	beq no_nmi
 	mov %r1, #0
-	str %r1, [%r4, #16]  @ cpu->nmi = 0
+	str %r1, [%r4, #XXX_16]  @ cpu->nmi = 0
 	ldr %r3, =0xfffa
 	b do_interrupt
 no_nmi:
-	ldr %r1, [%r4, #20]  @ r1 = cpu->take_int
+	ldr %r1, [%r4, #XXX_20]  @ r1 = cpu->take_int
 	cmp %r1, #0
 	beq no_interrupt
 	mov %r1, #0
-	str %r1, [%r4, #20]  @ cpu->take_int = 0
+	str %r1, [%r4, #XXX_20]  @ cpu->take_int = 0
 	ldr %r3, =0xfffe
 do_interrupt:
 	PUSHWORD %r6, %r2			@ push(cpu->pc)
@@ -168,47 +187,47 @@ do_interrupt:
 	and %r10, %r10, #255
 	ldrh %r6, [%r5, %r3] 		@ cpu->pc=*(uint16_t*)&(cpu->mem[0xfffe]);
 	orr %r11, #4 			 	@ cpu->p |= FLAG_I;
-	strh %r6, [%r4, #4]			@ Remove when C-only
-	strb %r10, [%r4, #9]    	@ Remove when C-only
-	strb %r11, [%r4, #10]		@ Remove when C-only
+	strh %r6, [%r4, #XXX_4]			@ Remove when C-only
+	strb %r10, [%r4, #XXX_9]    	@ Remove when C-only
+	strb %r11, [%r4, #XXX_10]		@ Remove when C-only
 	add %r0, %r0, #7		@	 c += 7;
 no_interrupt:
-	ldr %r1, [%r4, #12]  @ r1 = cpu->interrupt
+	ldr %r1, [%r4, #XXX_12]  @ r1 = cpu->interrupt
 	bic %r1, #128
-	str %r1, [%r4, #12]
+	str %r1, [%r4, #XXX_12]
 
 	@ Update CPU->cycles
 	mov %r1, %r0
-	ldr  %r0,[%r4, #24]
+	ldr  %r0,[%r4, #XXX_24]
 	subs  %r0, %r1
-	str  %r0,[%r4, #24]
+	str  %r0,[%r4, #XXX_24]
 	//bcs do_poll_now
 
 	@ Update intermediate cycle counter
-/*	ldr  %r0,[%r4, #38]
+/*	ldr  %r0,[%r4, #XXX_38]
 	add  %r0, %r1
-	str  %r0,[%r4, #38]
+	str  %r0,[%r4, #XXX_38]
 	cmp %r0, #32
 	blt no_poll_yet
 	sub %r0, #32
-	str  %r0,[%r4, #38]
+	str  %r0,[%r4, #XXX_38]
 do_poll_now:*/
 	mov %r0, %r4
 // 	bl do_poll
 no_poll_yet:
 
 	@ Loop back until cpu->cycles <=0
-	ldr  %r0,[%r4, #24]
+	ldr  %r0,[%r4, #XXX_24]
 	cmp  %r0, #0
 	bgt loop
 	
 	@ Update cpu fields, restore regs and exit
-    strh %r6, [%r4, #4] 	@  r6 = PC
-    strb %r7, [%r4, #6] 	@  r7 = A
-    strb %r8, [%r4, #7] 	@  r8 = X
-    strb %r9, [%r4, #8] 	@  r9 = Y
-    strb %r10,[%r4, #9] 	@ r10 = S
-    strb %r11,[%r4, #10] 	@ r11 = P
+    strh %r6, [%r4, #XXX_4] 	@  r6 = PC
+    strb %r7, [%r4, #XXX_6] 	@  r7 = A
+    strb %r8, [%r4, #XXX_7] 	@  r8 = X
+    strb %r9, [%r4, #XXX_8] 	@  r9 = Y
+    strb %r10,[%r4, #XXX_9] 	@ r10 = S
+    strb %r11,[%r4, #XXX_10] 	@ r11 = P
 
 	pop {%r4-%r12,lr}
     bx   lr
@@ -277,15 +296,16 @@ no_poll_yet:
 .endm
 .macro WRITEBYTE val, addr
 	// Mask Array
-
-//	ldrb %r3, [%r4, \addr, lsl #12]
-
-//	Single Mask Word
-	ldr %r3, [%r4, #44]
-	mov %r12, \addr, lsr #12
-	mov %r3, %r3, asr %r12
-	tst %r3, #1
+	ldrb %r3, [%r4, \addr, lsr #12]
+	cmp %r3, #0
 	beq .+12
+	
+//	Single Mask Word
+//	ldr %r3, [%r4, #XXX_44]
+//	mov %r12, \addr, lsr #12
+//	mov %r3, %r3, asr %r12
+//	tst %r3, #1
+//	beq .+12
 
 //	Original Atom Test
 //	cmp \addr, #0xa000
@@ -422,13 +442,13 @@ no_poll_yet:
 	SETZN %r7				@ setzn(cpu->a);   <-- 5 instructions
 	b .+36
 	push {lr}
-	strb %r7,  [%r4, #6]	// update A
-	strb %r11, [%r4, #10]   // update P
+	strb %r7,  [%r4, #XXX_6]	// update A
+	strb %r11, [%r4, #XXX_10]   // update P
 	mov %r0, %r4			// r0=cpu*, r1=imm
 	bl adc_bcd
 	pop {lr}
-	ldrb %r7,  [%r4, #6]	// update A
-	ldrb %r11, [%r4, #10]   // update P
+	ldrb %r7,  [%r4, #XXX_6]	// update A
+	ldrb %r11, [%r4, #XXX_10]   // update P
 .endm
 
 // 0x69: ADC imm
@@ -1549,13 +1569,13 @@ opasm_rts:
 	SETZN %r7				@ setzn(cpu->a);   <-- 5 instructions
 	b .+36
 	push {lr}
-	strb %r7,  [%r4, #6]	// update A
-	strb %r11, [%r4, #10]   // update P
+	strb %r7,  [%r4, #XXX_6]	// update A
+	strb %r11, [%r4, #XXX_10]   // update P
 	mov %r0, %r4			// r0=cpu*, r1=imm
 	bl sbc_bcd
 	pop {lr}
-	ldrb %r7,  [%r4, #6]	// update A
-	ldrb %r11, [%r4, #10]   // update P
+	ldrb %r7,  [%r4, #XXX_6]	// update A
+	ldrb %r11, [%r4, #XXX_10]   // update P
 .endm
 
 // 0xE9: SBC imm
@@ -1799,11 +1819,13 @@ opasm_tya:
  ********************/
 opasm_undef:
 	mov %r0, %r4
+	push {lr}
 	bl log_undef_opcode
+	pop {lr}
 	sub %r6, %r6, #1;		@ cpu->pc--;      	// PC never moves on
 	mov %r0, #0
-    str %r0, [%r4, #20]		@ cpu->takeint=0; 	// Interrupts never occur
-    str %r0, [%r4, #16]		@ cpu->nmi=0;  		// NMIs never occur
+    str %r0, [%r4, #XXX_20]		@ cpu->takeint=0; 	// Interrupts never occur
+    str %r0, [%r4, #XXX_16]		@ cpu->nmi=0;  		// NMIs never occur
     RETURN #65536			@ return 100000; 	// Actually lasts forever, but the above code keeps executing HLT forever
 
 

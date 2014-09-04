@@ -19,22 +19,25 @@
 #define FLAG_N 0x80
 
 typedef struct {
-  uint8_t* mem; // +0
-  uint16_t pc;  // +4
-  uint8_t a;    // +6
-  uint8_t x;    // +7
-  uint8_t y;    // +8
-  uint8_t s;    // +9
-  uint8_t p;    // +10
+  int writeMask0;
+  int writeMask1;
+  int writeMask2;
+  int writeMask3;
+  uint8_t* mem; // +16
+  uint16_t pc;  // +20
+  uint8_t a;    // +22
+  uint8_t x;    // +23
+  uint8_t y;    // +24
+  uint8_t s;    // +25
+  uint8_t p;    // +26
   uint8_t unused; //
-  int interrupt; // +12
-  int nmi;	  // +16
-  int takeint;  // +20
-  int cycles;   // +24
-  uint16_t pc_trigger_hit; //+28
-  uint16_t pc_triggers[4]; //+30
-  int cycles2;	// +40
-  int writeMask; // +44
+  int interrupt; // +28
+  int nmi;	  // +32
+  int takeint;  // +36
+  int cycles;   // +40
+  uint16_t pc_trigger_hit; //+44
+  uint16_t pc_triggers[4]; //+46
+  int cycles2;	// +56
 } M6502;
 
 extern M6502* the_cpu;
