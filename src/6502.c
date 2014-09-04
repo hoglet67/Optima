@@ -47,7 +47,6 @@ void initmem()
   the_cpu->mem[11] = rand() & 255;
 }
 
-
 void set_rr_ptrs()
 {
 
@@ -65,9 +64,11 @@ void set_rr_ptrs()
 	  memcpy(the_cpu->mem + 0x7000, roms + 0x19000,  ROM_SIZE_ATOM);
 	  memcpy(the_cpu->mem + 0xa000, roms + 0x1a000,  ROM_SIZE_ATOM);
 	  memcpy(the_cpu->mem + 0xc000, roms + 0x1c000,  4 * ROM_SIZE_ATOM);
+	  the_cpu->writeMask = 0x0000033f;
 	} else {
 	  debuglog("loading atom roms\n");
 	  memcpy(the_cpu->mem + 0xc000, roms + 0x10000,  4 * ROM_SIZE_ATOM);
+	  the_cpu->writeMask = 0x000003ff;
 	}
 	forcePage = 1;
       }

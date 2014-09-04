@@ -22,7 +22,7 @@
 @  r9 = Y
 @ r10 = S
 @ r11 = P
-@ r12 = cpu->cycles
+@ r12 = WriteLimit
 
 // branch without labels: count number of lines to skip over, add 1, multiply by 4. So to skip 2 lines, "b .+12"
 .macro PUSHWORD reg16, scrapreg
@@ -44,7 +44,7 @@
 
 .macro UPDATE_TAKEINT 	@ cpu->takeint=(cpu->interrupt && !(cpu->p & FLAG_I));
 	mov  %r1, #0
-	ldr  %r2, [%r4, #12]	@r12 = cpu->interrupt
+	ldr  %r2, [%r4, #12]	@r2 = cpu->interrupt
 	cmp  %r2, #0
 	beq  .+12
 	tstne  %r11, #4  		@ test the FLAG_I
@@ -124,6 +124,7 @@ use_c_fn:
     strb %r9, [%r4, #8] 	@  r9 = Y
     strb %r10,[%r4, #9] 	@ r10 = S
     strb %r11,[%r4, #10] 	@ r11 = P
+
 	mov  %r0, %r4  	@ Sole parameter for C opcode functions is r0 = CPU*
 	blx %r2
     ldrh %r6, [%r4, #4] 	@  r6 = PC
@@ -208,6 +209,7 @@ no_poll_yet:
     strb %r9, [%r4, #8] 	@  r9 = Y
     strb %r10,[%r4, #9] 	@ r10 = S
     strb %r11,[%r4, #10] 	@ r11 = P
+
 	pop {%r4-%r12,lr}
     bx   lr
 
@@ -274,8 +276,20 @@ no_poll_yet:
 	strb \val, [%r5, \addr]
 .endm
 .macro WRITEBYTE val, addr
-	cmp \addr, #0xa000
-	bge .+12
+	// Mask Array
+
+//	ldrb %r3, [%r4, \addr, lsl #12]
+
+//	Single Mask Word
+	ldr %r3, [%r4, #44]
+	mov %r12, \addr, lsr #12
+	mov %r3, %r3, asr %r12
+	tst %r3, #1
+	beq .+12
+
+//	Original Atom Test
+//	cmp \addr, #0xa000
+//	bge .+12
 	strb \val, [%r5, \addr]
 	b .+24
 	mov %r0, \addr
