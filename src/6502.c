@@ -57,6 +57,7 @@ void set_rr_ptrs()
       debuglog("ramrom_enable=%d, RR_enables=%2X, RR_bankreg=%2X\n", ramrom_enable, RR_enables, RR_bankreg);
 
       int forcePage = 0;
+
       // Has the beeb mode bit changed?
       if ((RR_enables & 8) != (last_RR_enables & 8)) {
 	if (RR_enables & 8) {
@@ -64,17 +65,9 @@ void set_rr_ptrs()
 	  memcpy(the_cpu->mem + 0x7000, roms + 0x19000,  ROM_SIZE_ATOM);
 	  memcpy(the_cpu->mem + 0xa000, roms + 0x1a000,  ROM_SIZE_ATOM);
 	  memcpy(the_cpu->mem + 0xc000, roms + 0x1c000,  4 * ROM_SIZE_ATOM);
-	  the_cpu->writeMask0 = 0xffffffff;
-	  the_cpu->writeMask1 = 0x0000ffff;
-	  the_cpu->writeMask2 = 0x0000ffff;
-	  the_cpu->writeMask3 = 0x00000000;
 	} else {
 	  debuglog("loading atom roms\n");
 	  memcpy(the_cpu->mem + 0xc000, roms + 0x10000,  4 * ROM_SIZE_ATOM);
-	  the_cpu->writeMask0 = 0xffffffff;
-	  the_cpu->writeMask1 = 0xffffffff;
-	  the_cpu->writeMask2 = 0x0000ffff;
-	  the_cpu->writeMask3 = 0x00000000;
 
 	}
 	forcePage = 1;
@@ -90,6 +83,31 @@ void set_rr_ptrs()
 	  memcpy(the_cpu->mem + 0xa000, roms + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
 	}
       }
+
+      // Make sure the write mask is correct
+      if (RR_enables & 8) {
+	the_cpu->writeMask0 = 0xffffffff;
+	the_cpu->writeMask1 = 0x0000ffff;
+	the_cpu->writeMask2 = 0x0000ffff;
+	the_cpu->writeMask3 = 0x00000000;
+	if ((RR_enables & 2) && (RR_bankreg == 0)) {
+	  the_cpu->writeMask1 |= 0x00ff0000;
+	}
+	if ((RR_enables & 1)) {
+	  the_cpu->writeMask1 |= 0xff000000;
+	}
+	debuglog("writeMask1 = %08x\n", the_cpu->writeMask1);
+      } else {
+	the_cpu->writeMask0 = 0xffffffff;
+	the_cpu->writeMask1 = 0xffffffff;
+	the_cpu->writeMask2 = 0x0000ffff;
+	the_cpu->writeMask3 = 0x00000000;
+	if ((RR_enables & 1) && (RR_bankreg == 0)) {
+	  the_cpu->writeMask2 |= 0x00ff0000;
+	}
+	debuglog("writeMask2 = %08x\n", the_cpu->writeMask2);
+      }
+
 
       last_RR_enables = RR_enables;
       last_RR_bankreg = RR_bankreg;
@@ -270,7 +288,7 @@ void writemem_ex(uint16_t addr, uint8_t val)
 				switch(addr)
 				{
 					case 0xBFFF :
-						RR_bankreg = val & 0x0F;
+						RR_bankreg = val & 0x1F;
 						set_rr_ptrs();
 						break;
 					
