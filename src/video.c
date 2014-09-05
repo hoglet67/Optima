@@ -9,6 +9,8 @@
 extern M6502* the_cpu;
 
 int fullscreen = 0;
+int palette = 0;
+
 int winsizex = 512, winsizey = 384;
 
 uint8_t fontdata[] =
@@ -165,42 +167,85 @@ void initvideo()
 //uint8_t *ram;
 int cy = 0, sy = 0;
 
+int *textcol;
+int *semigrcol;
+int *grcol;
+int black;
 
-int textcol[4] = {
-  0xff000000,
-  0xff00ff00,
-  0xff000000,
-  0xff007fff
+int textcols[2][4] = {
+  {
+    0xff000000,
+    0xff00ff00,
+    0xff000000,
+    0xff007fff
+  },
+  {
+    0xff202020,
+    0xffe0e0e0,
+    0xff202020,
+    0xffe0e0e0,
+  }
 };
 
 
-int semigrcol[8] = {
-  0xff00ff00,
-  0xff00ffff,
-  0xffff0000,
-  0xff0000ff,
-  0xffffffff,
-  0xffffff00,
-  0xffff00ff,
-  0xff007fff
+int semigrcols[2][8] = {
+  {
+    0xff00ff00,
+    0xff00ffff,
+    0xffff0000,
+    0xff0000ff,
+    0xffffffff,
+    0xffffff00,
+    0xffff00ff,
+    0xff007fff
+  },
+  {
+    0xffe0e0e0,
+    0xffffffff,
+    0xff808080,
+    0xff808080,
+    0xffffffff,
+    0xffe0e0e0,
+    0xffe0e0e0,
+    0xffe0e0e0,
+  }
 };
 
-int grcol[4] = {
-  0xff000000,
-  0xff00ff00,
-  0xff000000,
-  0xffffffff
+int grcols[2][4] = {
+  {
+    0xff000000,
+    0xff00ff00,
+    0xff000000,
+    0xffffffff
+  },
+  {
+    0xff202020,
+    0xffe0e0e0,
+    0xff202020,
+    0xffffffff
+  }
 };
 
-int black = 0xff000000;
+
+
+int blacks[2] = {
+  0xff000000,
+  0xff202020
+};
+
 
 void updatepal()
 {
+  textcol = textcols[palette];
+  semigrcol = semigrcols[palette];
+  grcol = grcols[palette];
+  black = blacks[palette];
+}
 
-  //	if (colourboard) 
-  //		set_palette(atompal);
-  //	else
-  //		set_palette(monopal);
+
+void togglepal() {
+  palette = 1 - palette;
+  updatepal();
 }
 
 
