@@ -167,14 +167,18 @@ void loadroms()
 {
 
   if (ramrom_enable) {
-    load_rom("roms/128K_pic.rom",	    ROMS_SIZE ,           roms,         0x0000);
+    load_rom("roms/128K_pic.rom",   ROMS_SIZE ,           roms,         0x0000);
     set_rr_ptrs();
   } else {
-    load_rom("roms/akernel_patched.rom",    ROM_SIZE_ATOM,        the_cpu->mem, 0xf000);
-    load_rom("roms/atommc2.rom",            ROM_SIZE_ATOM,        the_cpu->mem, 0xe000);
-    load_rom("roms/afloat_patched.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xd000);
-    load_rom("roms/abasic.rom",             ROM_SIZE_ATOM,        the_cpu->mem, 0xc000);
-    load_rom("roms/axr1.rom",               ROM_SIZE_ATOM,        the_cpu->mem, 0xa000);
+    load_rom("roms/akernel.rom",    ROM_SIZE_ATOM,        the_cpu->mem, 0xf000);
+    load_rom("roms/dosrom.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xe000);
+    load_rom("roms/afloat.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xd000);
+    load_rom("roms/abasic.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xc000);
+    load_rom("roms/axr1.rom",       ROM_SIZE_ATOM,        the_cpu->mem, 0xa000);
+    the_cpu->writeMask0 = 0xffffffff;
+    the_cpu->writeMask1 = 0xffffffff;
+    the_cpu->writeMask2 = 0x0000ffff;
+    the_cpu->writeMask3 = 0x00000000;
   }
 	//	load_rom("roms/atom_bbc_basic_os.rom",  ROM_SIZE_ATOM,          ROM_OFS_BBC_OS);
 	//	load_rom("roms/basic1.rom",             ROM_SIZE_BBC_BASIC, 	ROM_OFS_BBC_BASIC);
