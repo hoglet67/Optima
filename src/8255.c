@@ -84,7 +84,7 @@ void write8255(uint16_t addr, uint8_t val)
 //                if (gfxmode!=(val>>4)) printf("GFX mode now %02X %04X\n",val,pc);
 		gfxmode = (val >> 4) & 0x0F;
 //		if(gfxmode!=oldgfx)
-//			debuglog("gfxmode changed at PC=%04X from %02X to %02X\n",pc,oldgfx,gfxmode);
+//			rpclog("gfxmode changed at PC=%04X from %02X to %02X\n",pc,oldgfx,gfxmode);
 //                printf("GFX mode now %02X %04X\n",val,pc);
 //                printf("Keyrow now %i %04X\n",keyrow,pc);
 		break;
@@ -95,7 +95,7 @@ void write8255(uint16_t addr, uint8_t val)
 		  sndbuffer[(the_cpu->cyclesTotal >> 5) % (SNDBUFLEN * 2)] = speaker ? 4095 : -4095;
 		  last_speaker = speaker;
 		}
-		//debuglog("B002 = %02x\n", val);
+		//rpclog("B002 = %02x\n", val);
 		break;
 	case 3:
 		switch (val & 0x8E)
@@ -106,7 +106,7 @@ void write8255(uint16_t addr, uint8_t val)
 		    sndbuffer[(the_cpu->cyclesTotal >> 5) % (SNDBUFLEN * 2)] = speaker ? 4095 : -4095;
 		    last_speaker = speaker;
 		  }
-		  //debuglog("B003 = %02x\n", val);
+		  //rpclog("B003 = %02x\n", val);
 			break;
 			
 		case 0x06: 
@@ -116,7 +116,7 @@ void write8255(uint16_t addr, uint8_t val)
 		break;
 //                        rpclog("8255 port 3 %02X\n",val);
 	}
-        //debuglog("Write 8255 %04X %02X\n",addr,val);
+        //rpclog("Write 8255 %04X %02X\n",addr,val);
 }
 
 uint8_t read8255(uint16_t addr)
@@ -130,7 +130,7 @@ uint8_t read8255(uint16_t addr)
 	al_get_keyboard_state(&key_state);
 
 
-        //debuglog("Read 8255 %04X %04X\n",addr,pc);
+        //rpclog("Read 8255 %04X %04X\n",addr,pc);
 	switch (addr & 3)
 	{
 	case 0:

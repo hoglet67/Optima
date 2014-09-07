@@ -52,7 +52,7 @@ void reset8271()
 	i8271.paramnum = i8271.paramreq = 0;
 	i8271.status = 0;
 
-    debuglog("Reset 8271\n");
+    rpclog("Reset 8271\n");
 	fdctime = 0;
 	i8271.curtrack[0] = i8271.curtrack[1] = 0;
 	i8271.command = 0xFF;
@@ -70,7 +70,7 @@ static void NMI8271()
 	else
 		the_cpu->nmi = 0;
 		
-	debuglog("FDC:NMI=%d\n",the_cpu->nmi);
+	rpclog("FDC:NMI=%d\n",the_cpu->nmi);
 }
 
 
@@ -157,7 +157,7 @@ void seek8271()
 void write8271(uint16_t addr, uint8_t val)
 {
 //        rpclog("Write 8271 %04X %02X\n",addr,val);
-    debuglog("Write 8271 %04X %02X\n",addr,val);
+    rpclog("Write 8271 %04X %02X\n",addr,val);
 	switch (addr & 7)
 	{
 	case 0:         /*Command register*/

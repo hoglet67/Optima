@@ -54,19 +54,19 @@ void set_rr_ptrs()
   if (ramrom_enable)
     {
 
-      debuglog("ramrom_enable=%d, RR_enables=%2X, RR_bankreg=%2X\n", ramrom_enable, RR_enables, RR_bankreg);
+      rpclog("ramrom_enable=%d, RR_enables=%2X, RR_bankreg=%2X\n", ramrom_enable, RR_enables, RR_bankreg);
 
       int forcePage = 0;
 
       // Has the beeb mode bit changed?
       if ((RR_enables & 8) != (last_RR_enables & 8)) {
 	if (RR_enables & 8) {
-	  debuglog("loading bbc roms\n");
+	  rpclog("loading bbc roms\n");
 	  memcpy(the_cpu->mem + 0x7000, roms + 0x19000,  ROM_SIZE_ATOM);
 	  memcpy(the_cpu->mem + 0xa000, roms + 0x1a000,  ROM_SIZE_ATOM);
 	  memcpy(the_cpu->mem + 0xc000, roms + 0x1c000,  4 * ROM_SIZE_ATOM);
 	} else {
-	  debuglog("loading atom roms\n");
+	  rpclog("loading atom roms\n");
 	  memcpy(the_cpu->mem + 0xc000, roms + 0x10000,  4 * ROM_SIZE_ATOM);
 
 	}
@@ -76,10 +76,10 @@ void set_rr_ptrs()
       //Has the bank register changed?
       if (forcePage || (RR_bankreg != last_RR_bankreg)) {
 	if (RR_enables & 8) {
-	  debuglog("paging bbc rom %d to 0x6000\n", RR_bankreg);
+	  rpclog("paging bbc rom %d to 0x6000\n", RR_bankreg);
 	  memcpy(the_cpu->mem + 0x6000, roms + 0x8000 + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
 	} else {
-	  debuglog("paging atom rom %d to 0xA000\n", RR_bankreg);
+	  rpclog("paging atom rom %d to 0xA000\n", RR_bankreg);
 	  memcpy(the_cpu->mem + 0xa000, roms + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
 	}
       }
@@ -96,7 +96,7 @@ void set_rr_ptrs()
 	if ((RR_enables & 1)) {
 	  the_cpu->writeMask1 |= 0xff000000;
 	}
-	debuglog("writeMask1 = %08x\n", the_cpu->writeMask1);
+	rpclog("writeMask1 = %08x\n", the_cpu->writeMask1);
       } else {
 	the_cpu->writeMask0 = 0xffffffff;
 	the_cpu->writeMask1 = 0xffffffff;
@@ -105,7 +105,7 @@ void set_rr_ptrs()
 	if ((RR_enables & 1) && (RR_bankreg == 0)) {
 	  the_cpu->writeMask2 |= 0x00ff0000;
 	}
-	debuglog("writeMask2 = %08x\n", the_cpu->writeMask2);
+	rpclog("writeMask2 = %08x\n", the_cpu->writeMask2);
       }
 
 
@@ -187,7 +187,7 @@ void loadroms()
 
 void reset_rom()
 {
-	debuglog("reset_rom(), ramrom=%d, bbcmode=%d\n",ramrom_enable,bbcmode);
+	rpclog("reset_rom(), ramrom=%d, bbcmode=%d\n",ramrom_enable,bbcmode);
 #if 0	
 	if (!ramrom_enable)
 	{
@@ -208,7 +208,7 @@ void reset_rom()
 	rpclog("rom=%X\nkernel=%X\nbasic=%X\n",rom,akernel_ptr,abasic_ptr);
 	rpclog("ROM_OFS_RR_AKERNEL=%5X\n", ROM_OFS_RR_AKERNEL);
 #endif	
-	debuglog("reset_rom():done\n");
+	rpclog("reset_rom():done\n");
 }
 
 
@@ -275,7 +275,7 @@ void writemem_ex(uint16_t addr, uint8_t val)
 		
 		case 0xB400:
 			
-//			debuglog("addr=%04X, val=%02X\n",addr,val);
+//			rpclog("addr=%04X, val=%02X\n",addr,val);
 			
 			WriteMMC(addr,val);
 			return;

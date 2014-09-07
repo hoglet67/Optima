@@ -64,7 +64,7 @@ int ddframes = 0;
 
 void atom_reset(int power_on)
 {
-	debuglog("atom_reset(%d)\n",power_on);
+	rpclog("atom_reset(%d)\n",power_on);
 //	memset(ram, 0, 0x10000);
 	if(power_on)
 	{
@@ -75,13 +75,13 @@ void atom_reset(int power_on)
 	}
 	resetvia();
 	sid_reset();
-	debuglog("exedir=%s\n",exedir);
+	rpclog("exedir=%s\n",exedir);
 	InitMMC();
 	
 	reset8271();
 	gfxmode=0;
 	reset6502();
-	debuglog("atom_reset():done\n");
+	rpclog("atom_reset():done\n");
 
       // Init joystick
       // install_joystick(JOY_TYPE_AUTODETECT);
@@ -96,7 +96,7 @@ void atom_init(int argc, char **argv)
 	int c;
 	int tapenext = 0, discnext = 0;
 
-	debuglog("atom_init() done\n");
+	rpclog("atom_init() done\n");
 
 
 	for (c = 1; c < argc; c++)
@@ -183,7 +183,7 @@ void atom_init(int argc, char **argv)
 	al_start_timer(timer);
 
 
-	debuglog("atom_init() done\n");
+	rpclog("atom_init() done\n");
 }
 
 void changetimerspeed(int i)
@@ -204,7 +204,7 @@ void atom_run()
 
   ALLEGRO_EVENT e;
   al_wait_for_event(eventQueue, &e);
-  //debuglog("atom_run() event type = %d\n", e.type;)
+  //rpclog("atom_run() event type = %d\n", e.type;)
   count++;
 
   if (e.type == ALLEGRO_EVENT_TIMER) {
@@ -213,7 +213,7 @@ void atom_run()
     ddframes++;
     drawscr++;
   } else {
-    debuglog("atom_run() unexpected event type = %d\n", e.type);
+    rpclog("atom_run() unexpected event type = %d\n", e.type);
   }
 
 
@@ -233,7 +233,7 @@ void atom_run()
 
     // Alse executes a frame's worth of 6502 code...
     update_atom_display(colourboard ? 312 : 262, skip);
-    // debuglog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
+    // rpclog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
 
     if (tapeon && fasttape)
       drawscr = 0;
@@ -258,14 +258,14 @@ void atom_run()
 
 
     if (count == 300) {
-      debuglog("skipped %d out of %d frames (%.2f)%\n", skipped, count, 100.0 * skipped / count);
+      rpclog("skipped %d out of %d frames (%.2f)%\n", skipped, count, 100.0 * skipped / count);
       count = 0;
       skipped = 0;
     }
 
   } 
 
-  //debuglog("atom_run() done\n");
+  //rpclog("atom_run() done\n");
 }
 
 void atom_exit()

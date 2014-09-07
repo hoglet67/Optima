@@ -97,7 +97,7 @@ void initvideo()
   al_get_monitor_info(0, &info);
   int displayW = info.x2 - info.x1;
   int displayH = info.y2 - info.y1;
-  debuglog("screen is %d x %d\n", displayW, displayH);
+  rpclog("screen is %d x %d\n", displayW, displayH);
 
   al_set_new_display_flags(ALLEGRO_FULLSCREEN);
 
@@ -107,7 +107,7 @@ void initvideo()
   int sy = displayH / screenH;
   int scale = sx < sy ? sx : sy;
 
-  debuglog("scale is %d\n", scale);
+  rpclog("scale is %d\n", scale);
 
   scaleW = screenW * scale;
   scaleH = screenH * scale;
