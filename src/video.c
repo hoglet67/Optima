@@ -493,8 +493,19 @@ void drawline(int line)
 		{
 			fskipcount = 0;
 
+			unsigned int border;
+			// Work out border colour
+			if (gfxmode & 1) {
+			  // Graphics
+			  border = semigrcols[palette][css << 1];
+			} else {
+			  // Text, so use black
+			  border = textcols[palette][0];
+			}
+
 			al_unlock_bitmap(b);
 			al_set_target_bitmap(al_get_backbuffer(display));
+			al_clear_to_color(al_map_rgb((border >> 16) & 255, (border >> 8) & 255, border & 255));
 			al_draw_scaled_bitmap(b, 0, 0, screenW, screenH, scaleX, scaleY, scaleW, scaleH, 0);
 			al_flip_display();
 			al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
