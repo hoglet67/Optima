@@ -16,8 +16,8 @@ ALuint source[2];       // audio source
 ALuint buffersdd[4];    // front and back buffers
 ALenum format;          // internal format
 
-#define FREQ 31200
-#define BUFLEN ((312 * 2 * 5) * 4)
+#define FREQ 31250
+#define BUFLEN (SNDBUFLEN * 4)
 
 void closeal();
 
@@ -76,13 +76,14 @@ void inital()
 	memset(tempbuf, 0, BUFLEN);
 
 	for (c = 0; c < 4; c++)
-		alBufferData(buffers[c], AL_FORMAT_STEREO16, tempbuf, BUFLEN, 31200);
+		alBufferData(buffers[c], AL_FORMAT_STEREO16, tempbuf, BUFLEN, FREQ);
 	alSourceQueueBuffers(source[0], 4, buffers);
 	check();
 	alSourcePlay(source[0]);
 	check();
 //        printf("InitAL\n");
 
+/*
 	alGenBuffers(4, buffersdd);
 	check();
 
@@ -101,6 +102,7 @@ void inital()
 	check();
 	alSourcePlay(source[1]);
 	check();
+*/
 //        printf("InitAL\n");
 }
 

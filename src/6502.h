@@ -37,7 +37,7 @@ typedef struct {
   int cycles;   // +40
   uint16_t pc_trigger_hit; //+44
   uint16_t pc_triggers[4]; //+46
-  int cycles2;	// +56
+  uint32_t cyclesTotal;	// +56
 } M6502;
 
 extern M6502* the_cpu;

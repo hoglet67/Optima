@@ -3,9 +3,15 @@
 #include <string.h>
 #include <allegro.h>
 #include "atom.h"
+#include "6502.h"
 
-int16_t sndbuffer[312 * 2 * 5];
-int sndpos = 0;
+extern M6502* the_cpu;
+
+int16_t sndbuffer[SNDBUFLEN * 2];
+int16_t sidbuffer[SNDBUFLEN];
+int16_t last_val = 0;
+int     last_cyclecount = 0;
+
 
 /*SWARM - CTRL=LEFT, ADJ=RIGHT, REPT=FIRE*/
 /*PINBALL - SHIFT,REPT*/
@@ -64,6 +70,8 @@ void init8255()
 
 
 int keyrow;
+int last_speaker;
+
 void write8255(uint16_t addr, uint8_t val)
 {
 	int oldgfx = gfxmode;
@@ -82,18 +90,26 @@ void write8255(uint16_t addr, uint8_t val)
 		break;
 	case 2:
 		css = (val & 8) >> 2;
-		speaker = val & 4;
-//		rpclog("Speaker %i\n", (val & 4) >> 2);
+		speaker = (val & 4) >> 2;
+		if (speaker != last_speaker) {
+		  sndbuffer[(the_cpu->cyclesTotal >> 5) % (SNDBUFLEN * 2)] = speaker ? 4095 : -4095;
+		  last_speaker = speaker;
+		}
+		//debuglog("B002 = %02x\n", val);
 		break;
 	case 3:
-		switch (val & 0xE)
+		switch (val & 0x8E)
 		{
-		case 0x4: 
-			speaker = val & 1;                 
-			//rpclog("Speaker %i\n", (val & 4) >> 2); 
+		case 0x04: 
+		  speaker = (val & 1);
+		  if (speaker != last_speaker) {
+		    sndbuffer[(the_cpu->cyclesTotal >> 5) % (SNDBUFLEN * 2)] = speaker ? 4095 : -4095;
+		    last_speaker = speaker;
+		  }
+		  //debuglog("B003 = %02x\n", val);
 			break;
 			
-		case 0x6: 
+		case 0x06: 
 			css = (val & 1) ? 2 : 0; 
 			break;
 		}
@@ -246,52 +262,58 @@ void receive(uint8_t dat)
 	lastdat = dat;
 }
 
+// Currently pollsound is called every two lines (128us) emulated time
 void pollsound()
 {
-	int16_t temp[2];
-	temp[0] = 0;
-	temp[1] = 0;
-	//	temp[2] = 0;
-	//	temp[3] = 0;
 
-	if (sndatomsid)
-	{
-		sid_fillbuf(&temp[0],2);
-		sid_fillbuf(&temp[1],2);
-		//		sid_fillbuf(&temp[2],2);
-		//		sid_fillbuf(&temp[3],2);
-	}
+  int16_t temp;  
+  int i;
+  int cycle_count = (the_cpu->cyclesTotal >> 5) % SNDBUFLEN;
 
-	  
-	if (spon) {
-		temp[0] += (speaker) ? 4095 : -4096;
-		temp[1] += (speaker) ? 4095 : -4096;
-		//		temp[2] += (speaker) ? 4095 : -4096;
-		//		temp[3] += (speaker) ? 4095 : -4096;
-	}
+  // Detect when we have moved from one sound buffer to the other (i.e. cycle_count has wrapped)
+  if (cycle_count < last_cyclecount) {
 
-        if (tpon) {
-		temp[0] += (tapedat) ? 2047 : -2048;
-		temp[1] += (tapedat) ? 2047 : -2048;
-		//		temp[2] += (tapedat) ? 2047 : -2048;
-		//		temp[3] += (tapedat) ? 2047 : -2048;
-	}
+    // Offset is implementing double buffering
+    int offset = (((the_cpu->cyclesTotal >> 5) / SNDBUFLEN) & 1) ? 0 : SNDBUFLEN;
 
-	//	if (0!=temp1 || 0!=temp2)
-	//	{
-		sndbuffer[sndpos++] = temp[0];
-		sndbuffer[sndpos++] = temp[0];
-		sndbuffer[sndpos++] = temp[1];
-		sndbuffer[sndpos++] = temp[1];
-		//		sndbuffer[sndpos++] = temp[2];
-		//		sndbuffer[sndpos++] = temp[2];
-		//		sndbuffer[sndpos++] = temp[3];
-		//		sndbuffer[sndpos++] = temp[3];
-		//	}
+    // Iterate through the buffer overwriting 0's with the previous active value
+    int16_t *sndptr = sndbuffer + offset;
+    for (i = 0; i < SNDBUFLEN; i++) {
+      if (*sndptr == 0) {
+	*sndptr++ = last_val;
+      } else {
+	last_val = *sndptr++;
+      }
+    }
+    
+    // Add in the SID data 
+    if (sndatomsid) {
+      sndptr = sndbuffer + offset;
+      int16_t *sidptr = sidbuffer;
+      for (i = 0; i < SNDBUFLEN; i++) {
+	*sndptr++ += *sidptr++;
+      }
+    }
 
-	if (sndpos >= (312 * 2 * 5))
-	{
-		sndpos = 0;
-		givealbuffer(sndbuffer);
-	}
+    // Send to the OpenAL sound API
+    givealbuffer(sndbuffer + offset);
+
+    // Reset the buffer back to 0's again
+    memset(sndbuffer + offset, 0, SNDBUFLEN * 2);
+  }
+
+  // The SID code was setup to generate one sample per line
+  // Generate twp SID samples for the two lines
+  // Then double them to upsample to 31250Hz
+  if (sndatomsid) {
+    sid_fillbuf(&temp,2);
+    sidbuffer[cycle_count] = temp;
+    sidbuffer[cycle_count + 1] = temp;
+    sid_fillbuf(&temp,2);
+    sidbuffer[cycle_count + 2] = temp;
+    sidbuffer[cycle_count + 3] = temp;
+  }
+
+  // Remember for next time
+  last_cyclecount = cycle_count;
 }

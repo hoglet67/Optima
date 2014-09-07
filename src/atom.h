@@ -2,6 +2,8 @@
 
 #define MAXPATH	512
 
+#define SNDBUFLEN 1024
+
 void rpclog(char *format, ...);
 extern char exedir[MAXPATH+1];
 

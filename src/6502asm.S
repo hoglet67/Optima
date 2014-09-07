@@ -25,6 +25,7 @@ XXX_28=BASE + 28
 XXX_30=BASE + 30
 XXX_32=BASE + 32
 XXX_38=BASE + 38
+XXX_40=BASE + 40
 XXX_44=BASE + 44
 
 	
@@ -198,6 +199,12 @@ no_interrupt:
 
 	@ Update CPU->cycles
 	mov %r1, %r0
+
+	ldr  %r0,[%r4, #XXX_40]
+	add  %r0, %r1
+	str  %r0,[%r4, #XXX_40]
+
+	
 	ldr  %r0,[%r4, #XXX_24]
 	subs  %r0, %r1
 	str  %r0,[%r4, #XXX_24]
