@@ -8,10 +8,7 @@
 
 extern M6502* the_cpu;
 
-int fullscreen = 0;
 int palette = 0;
-
-int winsizex = 512, winsizey = 384;
 
 uint8_t fontdata[] =
 {
@@ -81,49 +78,19 @@ uint8_t fontdata[] =
 	0x00, 0x00, 0x00, 0x18, 0x24, 0x04, 0x08, 0x08, 0x00, 0x08, 0x00, 0x00,
 };
 
-int atompal[9][3] =
-{
-	{ 0,  0,  0  }, /*Black*/
-	{ 0,  63, 0  }, /*Green*/
-	{ 63, 63, 0  }, /*Yellow*/
-	{ 0,  0,  63 }, /*Blue*/
-	{ 63, 0,  0  }, /*Red*/
-	{ 63, 63, 63 }, /*Buff*/
-	{ 0,  63, 63 }, /*Cyan*/
-	{ 63, 0,  63 }, /*Magenta*/
-	{ 63, 0,  0  }, /*Orange - actually red on the Atom*/
-};
-
-int monopal[9][3] =
-{
-	{ 8,  8,  8  }, /*Black*/
-	{ 55, 55, 55 }, /*Green*/
-	{ 63, 63, 63 }, /*Yellow*/
-	{ 32, 32, 32 }, /*Blue*/
-	{ 32, 32, 32 }, /*Red*/
-	{ 63, 63, 63 }, /*Buff*/
-	{ 55, 55, 55 }, /*Cyan*/
-	{ 55, 55, 55 }, /*Magenta*/
-	{ 55, 55, 55 }, /*Orange - actually red on the Atom*/
-};
-
 ALLEGRO_DISPLAY *display;
 ALLEGRO_BITMAP *b;
 ALLEGRO_LOCKED_REGION *lr;
 
-int screenW;
-int screenH;
+int screenW = 256;
+int screenH = 192;
 int scaleW;
 int scaleH;
 int scaleX;
 int scaleY;
 
-//int depth;
 void initvideo()
 {
-
-  screenW = 256;
-  screenH = 192;
 
   ALLEGRO_MONITOR_INFO info;
 
@@ -155,16 +122,10 @@ void initvideo()
   al_set_target_bitmap(b);
   lr = al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
 
-  // if (colourboard)
-  //    set_palette(atompal);
-  // else
-  //    set_palette(monopal);
-
   updatepal();
 }
 
 
-//uint8_t *ram;
 int cy = 0, sy = 0;
 
 int *textcol;
@@ -266,17 +227,12 @@ void drawline(int line)
 	int x, xx;
 	uint8_t temp;
 
-	// debuglog("drawing line %d gfxmode %d \n", line, gfxmode);
-	// double t1 = al_get_time();
-
-
 
 	if (!line)
 		vbl = cy = sy = 0;
 		
 	if (line < 192)
 	{
-	  // al_set_target_bitmap(b);
 
 	  unsigned int *ptr = (unsigned int *)(lr->data + lr->pitch * line);
 	  int col;
@@ -531,35 +487,14 @@ void drawline(int line)
 		if (savescrshot)
 		{
 			savescrshot = 0;
-			/*
-			if (colourboard)
-				save_bmp(scrshotname, b, atompal);
-			else
-				save_bmp(scrshotname, b, monopal);
-			*/
 		}
 
 		if ((!(tapeon && fasttape) && fskipcount >= fskipmax) || frmcount == 60)
 		{
 			fskipcount = 0;
 
-
-			if (fullscreen)
-			{
-			  // stretch_blit(b2, screen, 0, 0, 256, 192, 0, 0, 1024, 768);
-			  // if (tapeon)
-			  //	rectfill(screen, 1000, 0, 1023, 8, makecol(255, 0, 0));
-			}
-			else
-			{
-			  // stretch_blit(b2, screen, 0, 0, 256, 192, 0, 0, winsizex, winsizey-1);
-			  //	if (tapeon)
-			  //		rectfill(screen, winsizex - 12, 0, winsizex, 4, makecol(255, 0, 0));
-			}
-
 			al_unlock_bitmap(b);
 			al_set_target_bitmap(al_get_backbuffer(display));
-			// al_draw_bitmap(b, 0, 0, 0);
 			al_draw_scaled_bitmap(b, 0, 0, screenW, screenH, scaleX, scaleY, scaleW, scaleH, 0);
 			al_flip_display();
 			al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
@@ -600,56 +535,4 @@ void drawline(int line)
 		}
 	}
 
-	//double t2 = al_get_time();
-	//debuglog("drawing line took %d\n", (int) (1000000.0 * (t2 - t1)));
-
-
-//        sndbuffer[line]=(speaker)?255:0;
-}
-
-/*void mixaudio(uint8_t *p)
-   {
-        memcpy(p,sndbuffer,262);
-   }*/
-
-void enterfullscreen()
-{
-/*	if (opengl)
-        {
-                rpclog("Enter fullscreen start\n");
-                openglreinit();
-                rpclog("Enter fullscreen end\n");
-                return;
-        }*/
-	updatepal();
-}
-
-void leavefullscreen()
-{
-/*	if (opengl)
-        {
-                openglreinit();
-                return;
-        }*/
-
-	//	set_color_depth(depth);
-	//#ifdef WIN32
-	//	set_gfx_mode(ALLEGRO_WINDOWED, 2048, 2048, 0, 0);
-	//#else
-	//	set_gfx_mode(ALLEGRO_WINDOWED, 512, 384, 0, 0);
-	//#endif
-
-	//set_color_depth(8);
-	updatepal();
-
-	updatewindowsize(512, 384);
-}
-
-void clearscreen()
-{
-  al_set_target_bitmap(al_get_backbuffer(display));
-  al_clear_to_color(al_map_rgb(0, 0, 0));
-
-  al_set_target_bitmap(b);
-  al_clear_to_color(al_map_rgb(0, 0, 0));  
 }
