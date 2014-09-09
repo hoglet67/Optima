@@ -70,7 +70,7 @@ static void NMI8271()
 	else
 		the_cpu->nmi = 0;
 		
-	rpclog("FDC:NMI=%d\n",the_cpu->nmi);
+	//	rpclog("FDC:NMI=%d\n",the_cpu->nmi);
 }
 
 

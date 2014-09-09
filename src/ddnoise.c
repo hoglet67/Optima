@@ -22,7 +22,6 @@ ALLEGRO_SAMPLE *seeksmp[4][2], *seek2smp, *seek3smp;
 ALLEGRO_SAMPLE *stepsmp;
 ALLEGRO_SAMPLE *motorsmp[3];
 
-#if 0
 void loaddiscsamps()
 {
 	char path[512], p2[512];
@@ -35,31 +34,31 @@ void loaddiscsamps()
 //        printf("path now %s\n",path);
 	chdir(path);
 
-	seeksmp[0][0] = load_wav("stepo.wav");
+	seeksmp[0][0] = al_load_sample("stepo.wav");
 	if (seeksmp[0][0])
 	{
-		seeksmp[0][1] = load_wav("stepi.wav");
-		seeksmp[1][0] = load_wav("seek1o.wav");
-		seeksmp[1][1] = load_wav("seek1i.wav");
-		seeksmp[2][0] = load_wav("seek2o.wav");
-		seeksmp[2][1] = load_wav("seek2i.wav");
-		seeksmp[3][0] = load_wav("seek3o.wav");
-		seeksmp[3][1] = load_wav("seek3i.wav");
+		seeksmp[0][1] = al_load_sample("stepi.wav");
+		seeksmp[1][0] = al_load_sample("seek1o.wav");
+		seeksmp[1][1] = al_load_sample("seek1i.wav");
+		seeksmp[2][0] = al_load_sample("seek2o.wav");
+		seeksmp[2][1] = al_load_sample("seek2i.wav");
+		seeksmp[3][0] = al_load_sample("seek3o.wav");
+		seeksmp[3][1] = al_load_sample("seek3i.wav");
 	}
 	else
 	{
-		seeksmp[0][0] = load_wav("step.wav");
-		seeksmp[0][1] = load_wav("step.wav");
-		seeksmp[1][0] = load_wav("seek.wav");
-		seeksmp[1][1] = load_wav("seek.wav");
-		seeksmp[2][0] = load_wav("seek3.wav");
-		seeksmp[2][1] = load_wav("seek3.wav");
-		seeksmp[3][0] = load_wav("seek2.wav");
-		seeksmp[3][1] = load_wav("seek2.wav");
+		seeksmp[0][0] = al_load_sample("step.wav");
+		seeksmp[0][1] = al_load_sample("step.wav");
+		seeksmp[1][0] = al_load_sample("seek.wav");
+		seeksmp[1][1] = al_load_sample("seek.wav");
+		seeksmp[2][0] = al_load_sample("seek3.wav");
+		seeksmp[2][1] = al_load_sample("seek3.wav");
+		seeksmp[3][0] = al_load_sample("seek2.wav");
+		seeksmp[3][1] = al_load_sample("seek2.wav");
 	}
-	motorsmp[0] = load_wav("motoron.wav");
-	motorsmp[1] = load_wav("motor.wav");
-	motorsmp[2] = load_wav("motoroff.wav");
+	motorsmp[0] = al_load_sample("motoron.wav");
+	motorsmp[1] = al_load_sample("motor.wav");
+	motorsmp[2] = al_load_sample("motoroff.wav");
 	chdir(p2);
 //        printf("done!\n");
 }
@@ -71,15 +70,15 @@ void closeddnoise()
 	for (c = 0; c < 4; c++)
 	{
 		if (seeksmp[c][0])
-			destroy_sample(seeksmp[c][0]);
+			al_destroy_sample(seeksmp[c][0]);
 		if (seeksmp[c][1])
-			destroy_sample(seeksmp[c][1]);
+			al_destroy_sample(seeksmp[c][1]);
 		seeksmp[c][0] = seeksmp[c][1] = NULL;
 	}
 	for (c = 0; c < 3; c++)
 	{
 		if (motorsmp[c])
-			destroy_sample(motorsmp[c]);
+			al_destroy_sample(motorsmp[c]);
 		motorsmp[c] = NULL;
 	}
 }
@@ -145,7 +144,7 @@ void mixddnoise()
 			ddbuffer[c] = 0;
 			if (ddnoise_mstat >= 0)
 			{
-				if (ddnoise_mpos >= motorsmp[ddnoise_mstat]->len)
+			  if (ddnoise_mpos >= al_get_sample_length(motorsmp[ddnoise_mstat]))
 				{
 					ddnoise_mpos = 0;
 					if (ddnoise_mstat != 1)
@@ -156,18 +155,18 @@ void mixddnoise()
 				if (ddnoise_mstat != -1)
 				{
 //                                if (!c) rpclog("MixM!\n");
-					ddbuffer[c] += ((int16_t)((((int16_t*)motorsmp[ddnoise_mstat]->data)[(int)ddnoise_mpos]) ^ 0x8000) / 2);
-					ddnoise_mpos += ((float)motorsmp[ddnoise_mstat]->freq / 44100.0);
+
+				  ddbuffer[c] += ((int16_t)((((int16_t*)al_get_sample_data(motorsmp[ddnoise_mstat]))[(int)ddnoise_mpos])));
+				  ddnoise_mpos += ((float)al_get_sample_frequency(motorsmp[ddnoise_mstat]) / 44100.0);
 				}
 			}
 		}
-
 		for (c = 0; c < 4410; c++)
 		{
 			if (ddnoise_sstat >= 0)
 			{
 //                        rpclog("SSTAT %i %i\n",ddnoise_sstat,c);
-				if (ddnoise_spos >= seeksmp[ddnoise_sstat][ddnoise_sdir]->len)
+			  if (ddnoise_spos >= al_get_sample_length(seeksmp[ddnoise_sstat][ddnoise_sdir]))
 				{
 					if (ddnoise_sstat > 0)
 					{
@@ -182,8 +181,8 @@ void mixddnoise()
 				else
 				{
 //                                if (!c) rpclog("MixS!\n");
-					ddbuffer[c] += ((int16_t)((((int16_t*)seeksmp[ddnoise_sstat][ddnoise_sdir]->data)[(int)ddnoise_spos]) ^ 0x8000) / 2);
-					ddnoise_spos += ((float)seeksmp[ddnoise_sstat][ddnoise_sdir]->freq / 44100.0);
+				  ddbuffer[c] += ((int16_t)((((int16_t*)al_get_sample_data(seeksmp[ddnoise_sstat][ddnoise_sdir]))[(int)ddnoise_spos])));
+				  ddnoise_spos += ((float)al_get_sample_frequency(seeksmp[ddnoise_sstat][ddnoise_sdir]) / 44100.0);
 				}
 			}
 			ddbuffer[c] = (ddbuffer[c] / 3) * ddvol;
@@ -197,4 +196,3 @@ void mixddnoise()
 
 	oldmotoron = motoron;
 }
-#endif

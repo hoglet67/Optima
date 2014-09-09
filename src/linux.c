@@ -31,7 +31,26 @@ int main(int argc, char **argv)
   int newf11;
   ALLEGRO_KEYBOARD_STATE key_state;
 
-  al_init();
+  if (!al_init()) {
+    fprintf(stderr, "failed to initialize allegro!\n");
+    return -1;
+  }
+
+  if (!al_install_audio()) {
+    fprintf(stderr, "failed to initialize allegro audio!\n");
+    return -1;
+  }
+
+  if (!al_init_acodec_addon()) {
+    fprintf(stderr, "failed to initialize allegro audio codecs!\n");
+    return -1;
+  }
+
+  if (!al_reserve_samples(16)) {
+    fprintf(stderr, "failed to reserve samples!\n");
+    return -1;
+  }
+
 
   // al_install_system(ALLEGRO_VERSION_INT, NULL);
 

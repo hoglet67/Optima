@@ -171,7 +171,7 @@ void loadroms()
     set_rr_ptrs();
   } else {
     load_rom("roms/akernel.rom",    ROM_SIZE_ATOM,        the_cpu->mem, 0xf000);
-    load_rom("roms/dosrom.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xe000);
+    load_rom("roms/dosrom-ba.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xe000);
     load_rom("roms/afloat.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xd000);
     load_rom("roms/abasic.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xc000);
     load_rom("roms/axr1.rom",       ROM_SIZE_ATOM,        the_cpu->mem, 0xa000);
@@ -215,18 +215,24 @@ void reset_rom()
 uint8_t readmem_ex(uint16_t addr)
 {
         uint8_t temp;
-	switch (addr & 0xFC00)
+	switch (addr & 0xFE00)
         {
 		case 0xB000:         /*8255 PIA*/
+	        case 0xB200:
 			return read8255(addr);
 
 		case 0xB400:
+	        case 0xB600:
 			return ReadMMC(addr);
 
 		case 0xB800:         /*6522 VIA*/
 			return readvia(addr);
+
+		case 0xBA00:
+			return read8271(addr);	/*FDC*/
 			
 		case 0xBC00:
+		case 0xBE00:
 			if((sndatomsid) && (addr>=0xBDC0) && (addr<=0xBDDF))
 				return sid_read(addr & 0x1F);
 				
@@ -261,9 +267,10 @@ void writemem_ex(uint16_t addr, uint8_t val)
 	int c;
 	if (addr<0xB000 || addr>=0xC000) return;
 
-	switch (addr & 0xFC00)
+	switch (addr & 0xFE00)
 	{
 		case 0xB000:         /*8255 PIA*/
+	        case 0xB200:
 			write8255(addr, val);
 			return;
 
@@ -272,8 +279,13 @@ void writemem_ex(uint16_t addr, uint8_t val)
 				writevia(addr, val);
 //                        if (addr=0xBFFF) rpclog("Write BFFF %02X\n",val);
 			return;
-		
+
+	        case 0xBA00:
+			write8271(addr, val); 
+			return;
+
 		case 0xB400:
+	        case 0xB600:
 			
 //			rpclog("addr=%04X, val=%02X\n",addr,val);
 			
@@ -281,6 +293,7 @@ void writemem_ex(uint16_t addr, uint8_t val)
 			return;
 			
 		case 0xBC00:
+	        case 0xBE00:
 			if((sndatomsid) && (addr>=0xBDC0) && (addr<=0xBDDF))
 			{
 				sid_write(addr & 0x1F,val);
@@ -429,8 +442,11 @@ void do_poll(M6502* cpu, int c) {
 		otherstuffcount+=128;
 //		logvols();
 		if (motorspin) {
-			motorspin--;
-			if (!motorspin) fdcspindown();
+			motorspin -= 2;
+			if (motorspin <= 0) {			
+				motorspin = 0;
+				fdcspindown();
+			}
 		}
 	}
 
@@ -444,6 +460,8 @@ void do_poll(M6502* cpu, int c) {
 		if (via.t1c<-3  || via.t2c<-3)  updatetimers();
 
 		otherstuffcount-=c;
+
+
 		if (motoron) {
 			if (fdctime) {
 				fdctime-=c;
@@ -451,7 +469,23 @@ void do_poll(M6502* cpu, int c) {
 			}
 			disctime-=c;
 			if (disctime<=0) {
-				disctime+=16; disc_poll();
+				disctime+=8;
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
+				disc_poll();
 			}
 		}
 	}
@@ -462,7 +496,7 @@ void logasm(int v) {
 	rpclog("here! %08x", v);
 }
 void log_undef_opcode(M6502* cpu) {
-	rpclog("Undefined opciode! pc=%04x", cpu->pc);
+	rpclog("Undefined opciode! pc=%04x\n", cpu->pc);
 }
 
 

@@ -136,7 +136,7 @@ void disc_seek(int drive, int track)
 {
 	if (drives[drive].seek)
 		drives[drive].seek(drive, track);
-	//	ddnoise_seek(track - oldtrack[drive]);
+	ddnoise_seek(track - oldtrack[drive]);
 	oldtrack[drive] = track;
 }
 

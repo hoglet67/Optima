@@ -83,7 +83,7 @@ void inital()
 	check();
 //        printf("InitAL\n");
 
-/*
+
 	alGenBuffers(4, buffersdd);
 	check();
 
@@ -102,7 +102,7 @@ void inital()
 	check();
 	alSourcePlay(source[1]);
 	check();
-*/
+
 //        printf("InitAL\n");
 }
 

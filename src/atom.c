@@ -171,7 +171,7 @@ void atom_init(int argc, char **argv)
 	inital();
 	sid_init();
 	sid_settype(sidmethod, cursid);
-	// loaddiscsamps();
+	loaddiscsamps();
 	loaddisc(0, discfns[0]);
 	loaddisc(1, discfns[1]);
 	atom_reset(1);
@@ -242,10 +242,10 @@ void atom_run()
 		
     if (drawscr > 25)
       drawscr = 0;
-		
-    if (ddframes >= 25) {
-      ddframes -= 25;
-      // mixddnoise();
+
+    if (ddframes >= 5) {
+      ddframes -= 5 ;
+      mixddnoise();
     }
 
     al_get_keyboard_state(&key_state);
@@ -271,7 +271,7 @@ void atom_run()
 void atom_exit()
 {
   saveconfig();
-  //	closeddnoise();
+  closeddnoise();
   FinalizeMMC();
   //        dumpregs();
   //        dumpram();
