@@ -159,6 +159,7 @@ void loadroms();
 void dumpram();
 
 void initvideo();
+void popup(char *message, int time);
 void drawline(int l);
 void updatepal();
 

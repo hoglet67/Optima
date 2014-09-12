@@ -11,7 +11,7 @@ MMCOBJ = atommc.o atmmc2core.o atmmc2wfn.o ff_emu.o ff_emudir.o wildcard.o
 
 # linux-keydefine.o
 
-LIBS =  -L/usr/local/lib -lallegro-static -lz -lopenal -lstdc++ -lm -L /opt/vc/lib -lGLESv2 -lX11  /usr/lib/libalut.a -lallegro_audio-static -lasound -lallegro_acodec-static
+LIBS =  -L/usr/local/lib -lallegro-static -lz -lopenal -lstdc++ -lm -L /opt/vc/lib -lGLESv2 -lX11  /usr/lib/libalut.a -lallegro_audio-static -lasound -lallegro_acodec-static  -lallegro_font-static  -lallegro_ttf-static -lfreetype
 
 Atomulator: $(OBJ) $(SIDOBJ) $(MMCOBJ)
 	$(CC) $(OBJ) $(SIDOBJ) $(MMCOBJ) -o "Atomulator" $(LIBS) 

@@ -37,12 +37,12 @@ int main(int argc, char **argv)
   }
 
   if (!al_install_audio()) {
-    fprintf(stderr, "failed to initialize allegro audio!\n");
+    fprintf(stderr, "failed to initialize allegro audio addon!\n");
     return -1;
   }
 
   if (!al_init_acodec_addon()) {
-    fprintf(stderr, "failed to initialize allegro audio codecs!\n");
+    fprintf(stderr, "failed to initialize allegro audio codec addon!\n");
     return -1;
   }
 
@@ -51,12 +51,16 @@ int main(int argc, char **argv)
     return -1;
   }
 
+  if (!al_init_font_addon()) {
+    fprintf(stderr, "failed to initialize allegro font addon!\n");
+    return -1;
+  }
 
-  // al_install_system(ALLEGRO_VERSION_INT, NULL);
+  if (!al_init_ttf_addon()) {
+    fprintf(stderr, "failed to initialize allegro ttf addon!\n");
+    return -1;
+  }
 
-  //get_executable_name(exedir, 511);
-  //p = get_filename(exedir);
-  //p[0] = 0;
   ALLEGRO_PATH *path = al_create_path(argv[0]);
   al_set_path_filename(path, NULL);
   strcpy(exedir, al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP));
@@ -72,6 +76,8 @@ int main(int argc, char **argv)
 
   int F1_pressed = 0;
   int F2_pressed = 0;
+  int F3_pressed = 0;
+  int oldsndddnoise;
 
   while (!quited) {
       atom_run();
@@ -89,23 +95,39 @@ int main(int argc, char **argv)
 	F1_pressed = 0;
       }
 
+
       // Toggle the ramrom support if F2 is pressed
       if (al_key_down(&key_state, ALLEGRO_KEY_F2)) {
 	  if (!F2_pressed) {
+	    ramrom_enable = !ramrom_enable;
 	    if (ramrom_enable) {
-	      // Disable RamRom
-	      ramrom_enable = 0;
-	      sndddnoise = 1;
-	    } else {
-	      // Enable RamRom
-	      ramrom_enable = 1;
+	      oldsndddnoise = sndddnoise;
 	      sndddnoise = 0;
+	      popup("RamRom Enabled", 120);
+	    } else {
+	      sndddnoise = oldsndddnoise;
+	      popup("RamRom Disabled", 120);
 	    }
 	    atom_reset(0);
 	    F2_pressed = 1;
 	  }
       } else {
 	F2_pressed = 0;
+      }
+
+      // Toggle the Disc Noise if F3 is pressed
+      if (al_key_down(&key_state, ALLEGRO_KEY_F3)) {
+	  if (!F3_pressed) {
+	    sndddnoise =  !sndddnoise;
+	    if (sndddnoise) {
+	      popup("Disc Noise Enabled", 120);
+	    } else {
+	      popup("Disc Noise Disabled", 120);
+	    }
+	    F3_pressed = 1;
+	  }
+      } else {
+	F3_pressed = 0;
       }
 
       // Exit if F4 is pressed

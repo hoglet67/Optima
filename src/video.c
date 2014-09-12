@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 #include <allegro.h>
+#include <allegro_font.h>
+#include <allegro_ttf.h>
 #include "atom.h"
 #include "6502.h"
 
@@ -82,12 +84,25 @@ ALLEGRO_DISPLAY *display;
 ALLEGRO_BITMAP *b;
 ALLEGRO_LOCKED_REGION *lr;
 
+ALLEGRO_FONT *font;
+
 int screenW = 256;
 int screenH = 192;
 int scaleW;
 int scaleH;
 int scaleX;
 int scaleY;
+int displayW;
+int displayH;
+
+char popup_message[255];
+int popup_time = 0;
+
+
+void popup(char *message, int time) {
+  strcpy(popup_message, message);
+  popup_time = time;
+}
 
 void initvideo()
 {
@@ -95,8 +110,8 @@ void initvideo()
   ALLEGRO_MONITOR_INFO info;
 
   al_get_monitor_info(0, &info);
-  int displayW = info.x2 - info.x1;
-  int displayH = info.y2 - info.y1;
+  displayW = info.x2 - info.x1;
+  displayH = info.y2 - info.y1;
   rpclog("screen is %d x %d\n", displayW, displayH);
 
   al_set_new_display_flags(ALLEGRO_FULLSCREEN);
@@ -123,7 +138,14 @@ void initvideo()
   lr = al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
 
   updatepal();
+
+  font = al_load_font("fonts/DejaVuSans.ttf", 72, 0);
+
+  if (!font) {
+    rpclog("Failed to load font\n");
+  }
 }
+
 
 
 int cy = 0, sy = 0;
@@ -207,6 +229,11 @@ void updatepal()
 void togglepal() {
   palette = 1 - palette;
   updatepal();
+  if (palette) {
+      popup("Monochrome Palette", 120);
+  } else {
+      popup("Colour Palette", 120);
+  }
 }
 
 
@@ -507,6 +534,11 @@ void drawline(int line)
 			al_set_target_bitmap(al_get_backbuffer(display));
 			al_clear_to_color(al_map_rgb((border >> 16) & 255, (border >> 8) & 255, border & 255));
 			al_draw_scaled_bitmap(b, 0, 0, screenW, screenH, scaleX, scaleY, scaleW, scaleH, 0);
+			if (popup_time) {
+			  float a = popup_time >= 32 ? 1.0 : popup_time / 32.0;
+			  al_draw_text(font, al_map_rgba_f(a, 0.0, 0.0, a), (displayW >> 1), (displayH >> 1), ALLEGRO_ALIGN_CENTRE, popup_message);
+			  popup_time--;
+			}
 			al_flip_display();
 			al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
 			al_set_target_bitmap(b);
