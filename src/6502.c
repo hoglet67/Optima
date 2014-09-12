@@ -27,9 +27,11 @@ int last_RR_enables = -1;
 M6502 acpu;
 M6502* the_cpu = &acpu;
 
-#define ROMS_SIZE 0x20000
+#define ROMS_RAMROM_SIZE 0x20000
+#define ROMS_NORMAL_SIZE 0x10000
 
-uint8_t *roms;
+uint8_t *roms_ramrom;
+uint8_t *roms_normal;
 
 int otherstuffcount=0;
 
@@ -39,7 +41,8 @@ void initmem()
   the_cpu->mem = (uint8_t*)malloc(0x10000);
   memset(the_cpu->mem, 0, 0x10000);
 
-  roms = (uint8_t*)malloc(ROMS_SIZE);
+  roms_ramrom = (uint8_t*)malloc(ROMS_RAMROM_SIZE);
+  roms_normal = (uint8_t*)malloc(ROMS_NORMAL_SIZE);
 	
   the_cpu->mem[8] = rand() & 255;
   the_cpu->mem[9] = rand() & 255;
@@ -62,12 +65,12 @@ void set_rr_ptrs()
       if ((RR_enables & 8) != (last_RR_enables & 8)) {
 	if (RR_enables & 8) {
 	  rpclog("loading bbc roms\n");
-	  memcpy(the_cpu->mem + 0x7000, roms + 0x19000,  ROM_SIZE_ATOM);
-	  memcpy(the_cpu->mem + 0xa000, roms + 0x1a000,  ROM_SIZE_ATOM);
-	  memcpy(the_cpu->mem + 0xc000, roms + 0x1c000,  4 * ROM_SIZE_ATOM);
+	  memcpy(the_cpu->mem + 0x7000, roms_ramrom + 0x19000,  ROM_SIZE_ATOM);
+	  memcpy(the_cpu->mem + 0xa000, roms_ramrom + 0x1a000,  ROM_SIZE_ATOM);
+	  memcpy(the_cpu->mem + 0xc000, roms_ramrom + 0x1c000,  4 * ROM_SIZE_ATOM);
 	} else {
 	  rpclog("loading atom roms\n");
-	  memcpy(the_cpu->mem + 0xc000, roms + 0x10000,  4 * ROM_SIZE_ATOM);
+	  memcpy(the_cpu->mem + 0xc000, roms_ramrom + 0x10000,  4 * ROM_SIZE_ATOM);
 
 	}
 	forcePage = 1;
@@ -77,10 +80,10 @@ void set_rr_ptrs()
       if (forcePage || (RR_bankreg != last_RR_bankreg)) {
 	if (RR_enables & 8) {
 	  rpclog("paging bbc rom %d to 0x6000\n", RR_bankreg);
-	  memcpy(the_cpu->mem + 0x6000, roms + 0x8000 + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
+	  memcpy(the_cpu->mem + 0x6000, roms_ramrom + 0x8000 + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
 	} else {
 	  rpclog("paging atom rom %d to 0xA000\n", RR_bankreg);
-	  memcpy(the_cpu->mem + 0xa000, roms + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
+	  memcpy(the_cpu->mem + 0xa000, roms_ramrom + RR_bankreg * ROM_SIZE_ATOM, ROM_SIZE_ATOM);
 	}
       }
 
@@ -111,38 +114,10 @@ void set_rr_ptrs()
 
       last_RR_enables = RR_enables;
       last_RR_bankreg = RR_bankreg;
+
     }
 }
 
-#if 0
-		// Select what is mapped into $A000 block, this allows the 
-		// mapping of rom or ram into the utility block so that a 
-		// rom may be loaded from disk and then mapped in.
-		if ((RR_enables & RAMROM_FLAG_EXTRAM) && (RR_bankreg==0))
-			utility_ptr = &ram[0x7000];
-		else
-			utility_ptr = &rom[ROM_OFS_RAMROM + (RR_bankreg * ROM_SIZE_ATOM)];
-		
-		rpclog("RR_enables=%2X, RR_bankreg=%2X\n",RR_enables, RR_bankreg);
-		rpclog("utility_ptr set to %X\n\n",utility_ptr);
-
-
-		// select Kernel and dosrom based on jumper setting.
-		// The kernel needs to be changed as well as the dosrom, as the ramrom 
-		// has a modified kernel to allow the starting of the AtoMMC firmware
-		// when it resides at $E000.
-		// Note as of 2012-06-28 the real ram-rom does not do this (yet).
-		if (ramrom_enable && RR_bit_set(RAMROM_FLAG_DISKROM))
-		{
-			dosrom_ptr      = &rom[ROM_OFS_RR_DOSROM];
-			akernel_ptr     = &rom[ROM_OFS_RR_AKERNEL];
-		}
-		else
-		{
-			dosrom_ptr      = &rom[ROM_OFS_DOSROM];
-			akernel_ptr     = &rom[ROM_OFS_AKERNEL];
-		}
-#endif
 
 void load_rom(char *Name, int Size, uint8_t *mem, int Offset)
 {
@@ -165,52 +140,34 @@ void load_rom(char *Name, int Size, uint8_t *mem, int Offset)
 
 void loadroms()
 {
+  // Load the RamRom board Roms
+  load_rom("roms/128K_pic.rom",   ROMS_RAMROM_SIZE ,    roms_ramrom, 0x0000);
+  // Load the Normal Roms
+  load_rom("roms/akernel.rom",    ROM_SIZE_ATOM,        roms_normal, 0xf000);
+  load_rom("roms/dosrom-ba.rom",  ROM_SIZE_ATOM,        roms_normal, 0xe000);
+  load_rom("roms/afloat.rom",     ROM_SIZE_ATOM,        roms_normal, 0xd000);
+  load_rom("roms/abasic.rom",     ROM_SIZE_ATOM,        roms_normal, 0xc000);
+  load_rom("roms/axr1.rom",       ROM_SIZE_ATOM,        roms_normal, 0xa000);
+}
 
+void reset_rom()
+{
+  rpclog("reset_rom(), ramrom=%d\n", ramrom_enable);
   if (ramrom_enable) {
-    load_rom("roms/128K_pic.rom",   ROMS_SIZE ,           roms,         0x0000);
+    last_RR_bankreg = -1;
+    last_RR_enables = -1;
     set_rr_ptrs();
+
   } else {
-    load_rom("roms/akernel.rom",    ROM_SIZE_ATOM,        the_cpu->mem, 0xf000);
-    load_rom("roms/dosrom-ba.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xe000);
-    load_rom("roms/afloat.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xd000);
-    load_rom("roms/abasic.rom",     ROM_SIZE_ATOM,        the_cpu->mem, 0xc000);
-    load_rom("roms/axr1.rom",       ROM_SIZE_ATOM,        the_cpu->mem, 0xa000);
+    memcpy(the_cpu->mem + 0xa000, roms_normal + 0xa000,  ROM_SIZE_ATOM);
+    memcpy(the_cpu->mem + 0xc000, roms_normal + 0xc000,  ROM_SIZE_ATOM * 4);
     the_cpu->writeMask0 = 0xffffffff;
     the_cpu->writeMask1 = 0xffffffff;
     the_cpu->writeMask2 = 0x0000ffff;
     the_cpu->writeMask3 = 0x00000000;
   }
-	//	load_rom("roms/atom_bbc_basic_os.rom",  ROM_SIZE_ATOM,          ROM_OFS_BBC_OS);
-	//	load_rom("roms/basic1.rom",             ROM_SIZE_BBC_BASIC, 	ROM_OFS_BBC_BASIC);
-	//	load_rom("roms/ramrom.rom",             RAM_ROM_SIZE,           ROM_OFS_RAMROM);
+  rpclog("reset_rom():done\n");
 }
-
-void reset_rom()
-{
-	rpclog("reset_rom(), ramrom=%d, bbcmode=%d\n",ramrom_enable,bbcmode);
-#if 0	
-	if (!ramrom_enable)
-	{
-		utility_ptr     = &rom[ROM_OFS_UTILITY];
-		abasic_ptr      = &rom[ROM_OFS_ABASIC];
-		afloat_ptr      = &rom[ROM_OFS_AFLOAT];
-		dosrom_ptr      = &rom[ROM_OFS_DOSROM];
-		akernel_ptr     = &rom[ROM_OFS_AKERNEL];
-		rpclog("Running with standard roms\n");
-	}
-	else
-	{
-		abasic_ptr      = &rom[ROM_OFS_RR_ABASIC];
-		afloat_ptr      = &rom[ROM_OFS_RR_AFLOAT];
-		set_rr_ptrs();
-		rpclog("Running with Ramoth RAMROM roms\n");
-	}
-	rpclog("rom=%X\nkernel=%X\nbasic=%X\n",rom,akernel_ptr,abasic_ptr);
-	rpclog("ROM_OFS_RR_AKERNEL=%5X\n", ROM_OFS_RR_AKERNEL);
-#endif	
-	rpclog("reset_rom():done\n");
-}
-
 
 uint8_t readmem_ex(uint16_t addr)
 {
@@ -322,6 +279,7 @@ void writemem_ex(uint16_t addr, uint8_t val)
 void reset6502()
 {
 	int c;
+	reset_rom();
 	the_cpu->cycles=0;
 	the_cpu->pc=*(uint16_t*)&(the_cpu->mem[0xfffc]);
 	the_cpu->p |= FLAG_I;

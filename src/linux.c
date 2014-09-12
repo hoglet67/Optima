@@ -71,6 +71,7 @@ int main(int argc, char **argv)
   al_install_keyboard();
 
   int F1_pressed = 0;
+  int F2_pressed = 0;
 
   while (!quited) {
       atom_run();
@@ -78,7 +79,7 @@ int main(int argc, char **argv)
       al_get_keyboard_state(&key_state);
 
 
-      // Toggle the pallette if F0 is pressed
+      // Toggle the pallette if F1 is pressed
       if (al_key_down(&key_state, ALLEGRO_KEY_F1)) {
 	  if (!F1_pressed) {
 	    togglepal();
@@ -86,6 +87,25 @@ int main(int argc, char **argv)
 	  }
       } else {
 	F1_pressed = 0;
+      }
+
+      // Toggle the ramrom support if F2 is pressed
+      if (al_key_down(&key_state, ALLEGRO_KEY_F2)) {
+	  if (!F2_pressed) {
+	    if (ramrom_enable) {
+	      // Disable RamRom
+	      ramrom_enable = 0;
+	      sndddnoise = 1;
+	    } else {
+	      // Enable RamRom
+	      ramrom_enable = 1;
+	      sndddnoise = 0;
+	    }
+	    atom_reset(0);
+	    F2_pressed = 1;
+	  }
+      } else {
+	F2_pressed = 0;
       }
 
       // Exit if F4 is pressed
