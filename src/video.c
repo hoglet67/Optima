@@ -598,7 +598,6 @@ void drawline(int line)
 	if (line == 261)
 		vbl = 0;
 
-	// if ((line == 261 && !colourboard) || line == 311)
 	if (line == 261)
 	{
 		switch (gfxmode)

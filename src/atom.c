@@ -177,7 +177,7 @@ void atom_init(int argc, char **argv)
 	atom_reset(1);
 
 
-	timer = al_create_timer(ALLEGRO_BPS_TO_SECS(colourboard ? 50 : 60));	
+	timer = al_create_timer(ALLEGRO_BPS_TO_SECS(60));	
 	eventQueue = al_create_event_queue();
 	al_register_event_source(eventQueue, al_get_timer_event_source(timer));
 	al_start_timer(timer);
@@ -263,14 +263,13 @@ void atom_run()
 
     // Alse executes a frame's worth of 6502 code...
     // Decided *not* to emulate 50Hz updates
-    // update_atom_display(colourboard ? 312 : 262, skip);
     update_atom_display(262, skip);
     // rpclog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
 
     if (tapeon && fasttape)
       drawscr = 0;
     else
-      drawscr -= 1; //(colourboard) ? 6 : 5;
+      drawscr -= 1;
 		
     if (drawscr > 25)
       drawscr = 0;
