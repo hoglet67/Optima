@@ -8,9 +8,17 @@
 #include "atom.h"
 #include "6502.h"
 
+// The native pi cursor seems to be broken
+// As a workaround, we'll plot this ourselves
+#include "picursor.h"
+#define DEFAULT_CURSOR_WIDTH 17
+#define DEFAULT_CURSOR_HEIGHT 28
+
 extern M6502* the_cpu;
 
-int palette = 0;
+int show_menu = 0;
+
+int fullscreen = 1;
 
 uint8_t fontdata[] =
 {
@@ -82,9 +90,11 @@ uint8_t fontdata[] =
 
 ALLEGRO_DISPLAY *display;
 ALLEGRO_BITMAP *b;
+ALLEGRO_BITMAP *cursor;
 ALLEGRO_LOCKED_REGION *lr;
 
 ALLEGRO_FONT *font;
+ALLEGRO_FONT *menufont;
 
 int screenW = 256;
 int screenH = 192;
@@ -106,7 +116,7 @@ void popup(char *message, int time) {
 
 void initvideo()
 {
-
+  int x, y;
   ALLEGRO_MONITOR_INFO info;
 
   al_get_monitor_info(0, &info);
@@ -132,18 +142,42 @@ void initvideo()
   al_clear_to_color(al_map_rgb(0, 0, 0));
   al_flip_display();
 
-  b = al_create_bitmap(screenW, screenH);
+  // Create the mouse cursor
+  cursor = al_create_bitmap(DEFAULT_CURSOR_WIDTH, DEFAULT_CURSOR_HEIGHT);
+  al_set_target_bitmap(cursor);
+  uint32_t *cursor = default_cursor;
+  for (y = 0; y < DEFAULT_CURSOR_HEIGHT; y++) {
+    for (x = 0; x < DEFAULT_CURSOR_WIDTH; x++) {
+      uint32_t col = *cursor++;
+      al_put_pixel(x, y, al_map_rgba(col & 255, (col >> 8) & 255, (col >> 16) & 255,  (col >> 24) & 255));
+    }
+  }
 
+  b = al_create_bitmap(screenW, screenH);
   al_set_target_bitmap(b);
   lr = al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
 
   updatepal();
 
-  font = al_load_font("fonts/DejaVuSans.ttf", 72, 0);
+  font = al_load_font("fonts/DejaVuSans.ttf", POPUP_FONT_SIZE, 0);
 
   if (!font) {
     rpclog("Failed to load font\n");
   }
+
+  menufont = al_load_font("fonts/DejaVuSans.ttf", MENU_FONT_SIZE, 0);
+
+  if (!menufont) {
+    rpclog("Failed to load menufont\n");
+  }
+
+  optima_gui_init(display, menufont);
+
+  //  al_grab_mouse(display);
+  //if (!al_show_mouse_cursor(display)) {
+  //  rpclog("Failed to show mouse cursor\n");
+  //}
+
 }
 
 
@@ -157,21 +191,31 @@ int black;
 
 int textcols[2][4] = {
   {
+    0xff202020,
+    0xffe0e0e0,
+    0xff202020,
+    0xffe0e0e0,
+  },
+  {
     0xff000000,
     0xff00ff00,
     0xff000000,
     0xff007fff
-  },
-  {
-    0xff202020,
-    0xffe0e0e0,
-    0xff202020,
-    0xffe0e0e0,
   }
 };
 
 
 int semigrcols[2][8] = {
+  {
+    0xffe0e0e0,
+    0xffffffff,
+    0xff808080,
+    0xff808080,
+    0xffffffff,
+    0xffe0e0e0,
+    0xffe0e0e0,
+    0xffe0e0e0,
+  },
   {
     0xff00ff00,
     0xff00ffff,
@@ -181,30 +225,20 @@ int semigrcols[2][8] = {
     0xffffff00,
     0xffff00ff,
     0xff007fff
-  },
-  {
-    0xffe0e0e0,
-    0xffffffff,
-    0xff808080,
-    0xff808080,
-    0xffffffff,
-    0xffe0e0e0,
-    0xffe0e0e0,
-    0xffe0e0e0,
   }
 };
 
 int grcols[2][4] = {
   {
-    0xff000000,
-    0xff00ff00,
-    0xff000000,
-    0xffffffff
-  },
-  {
     0xff202020,
     0xffe0e0e0,
     0xff202020,
+    0xffffffff
+  },
+  {
+    0xff000000,
+    0xff00ff00,
+    0xff000000,
     0xffffffff
   }
 };
@@ -212,31 +246,29 @@ int grcols[2][4] = {
 
 
 int blacks[2] = {
-  0xff000000,
-  0xff202020
+  0xff202020,
+  0xff000000
 };
 
 
 void updatepal()
 {
-  textcol = textcols[palette];
-  semigrcol = semigrcols[palette];
-  grcol = grcols[palette];
-  black = blacks[palette];
+  textcol = textcols[colourboard];
+  semigrcol = semigrcols[colourboard];
+  grcol = grcols[colourboard];
+  black = blacks[colourboard];
 }
 
 
 void togglepal() {
-  palette = 1 - palette;
+  colourboard = 1 - colourboard;
   updatepal();
-  if (palette) {
-      popup("Monochrome Palette", 120);
-  } else {
+  if (colourboard) {
       popup("Colour Palette", 120);
+  } else {
+      popup("Monochrome Palette", 120);
   }
 }
-
-
 
 int tapeon;
 int frmcount;
@@ -524,21 +556,32 @@ void drawline(int line)
 			// Work out border colour
 			if (gfxmode & 1) {
 			  // Graphics
-			  border = semigrcols[palette][css << 1];
+			  border = semigrcols[colourboard][css << 1];
 			} else {
 			  // Text, so use black
-			  border = textcols[palette][0];
+			  border = textcols[colourboard][0];
 			}
 
 			al_unlock_bitmap(b);
 			al_set_target_bitmap(al_get_backbuffer(display));
 			al_clear_to_color(al_map_rgb((border >> 16) & 255, (border >> 8) & 255, border & 255));
 			al_draw_scaled_bitmap(b, 0, 0, screenW, screenH, scaleX, scaleY, scaleW, scaleH, 0);
+
+			// If a popup is active, then render it
 			if (popup_time) {
 			  float a = popup_time >= 32 ? 1.0 : popup_time / 32.0;
 			  al_draw_text(font, al_map_rgba_f(a, 0.0, 0.0, a), (displayW >> 1), (displayH >> 1), ALLEGRO_ALIGN_CENTRE, popup_message);
 			  popup_time--;
 			}
+
+			// If the menu is active, then render it
+			if (show_menu) {
+			  optima_gui_draw();
+			  ALLEGRO_MOUSE_STATE mouseState;
+			  al_get_mouse_state(&mouseState);
+			  al_draw_bitmap(cursor, mouseState.x, mouseState.y, 0);
+			}
+
 			al_flip_display();
 			al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
 			al_set_target_bitmap(b);
@@ -555,7 +598,8 @@ void drawline(int line)
 	if (line == 261)
 		vbl = 0;
 
-	if ((line == 261 && !colourboard) || line == 311)
+	// if ((line == 261 && !colourboard) || line == 311)
+	if (line == 261)
 	{
 		switch (gfxmode)
 		{

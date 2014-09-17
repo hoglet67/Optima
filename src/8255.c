@@ -92,7 +92,9 @@ void write8255(uint16_t addr, uint8_t val)
 		css = (val & 8) >> 2;
 		speaker = (val & 4) >> 2;
 		if (speaker != last_speaker) {
-		  sndbuffer[(the_cpu->cyclesTotal >> 5) % (SNDBUFLEN * 2)] = speaker ? 4095 : -4095;
+		  if (spon) {
+		    sndbuffer[(the_cpu->cyclesTotal >> 5) % (SNDBUFLEN * 2)] = speaker ? 4095 : -4095;
+		  }
 		  last_speaker = speaker;
 		}
 		//rpclog("B002 = %02x\n", val);
@@ -103,7 +105,9 @@ void write8255(uint16_t addr, uint8_t val)
 		case 0x04: 
 		  speaker = (val & 1);
 		  if (speaker != last_speaker) {
-		    sndbuffer[(the_cpu->cyclesTotal >> 5) % (SNDBUFLEN * 2)] = speaker ? 4095 : -4095;
+		    if (spon) {
+		      sndbuffer[(the_cpu->cyclesTotal >> 5) % (SNDBUFLEN * 2)] = speaker ? 4095 : -4095;
+		    }
 		    last_speaker = speaker;
 		  }
 		  //rpclog("B003 = %02x\n", val);
@@ -277,18 +281,20 @@ void pollsound()
     int offset = (((the_cpu->cyclesTotal >> 5) / SNDBUFLEN) & 1) ? 0 : SNDBUFLEN;
 
     // Iterate through the buffer overwriting 0's with the previous active value
-    int16_t *sndptr = sndbuffer + offset;
-    for (i = 0; i < SNDBUFLEN; i++) {
-      if (*sndptr == 0) {
-	*sndptr++ = last_val;
-      } else {
-	last_val = *sndptr++;
+    if (spon) {
+      int16_t *sndptr = sndbuffer + offset;
+      for (i = 0; i < SNDBUFLEN; i++) {
+	if (*sndptr == 0) {
+	  *sndptr++ = last_val;
+	} else {
+	  last_val = *sndptr++;
+	}
       }
     }
     
     // Add in the SID data 
     if (sndatomsid) {
-      sndptr = sndbuffer + offset;
+      int16_t *sndptr = sndbuffer + offset;
       int16_t *sidptr = sidbuffer;
       for (i = 0; i < SNDBUFLEN; i++) {
 	*sndptr++ += *sidptr++;

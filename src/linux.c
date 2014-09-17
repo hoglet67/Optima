@@ -61,6 +61,11 @@ int main(int argc, char **argv)
     return -1;
   }
 
+  if (!al_init_primitives_addon()) {
+    fprintf(stderr, "failed to initialize allegro primitives addon!\n");
+    return -1;
+  }
+
   ALLEGRO_PATH *path = al_create_path(argv[0]);
   al_set_path_filename(path, NULL);
   strcpy(exedir, al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP));
@@ -71,12 +76,20 @@ int main(int argc, char **argv)
   if (defaultwriteprot)
     writeprot[0] = writeprot[1] = 1;
 
-  atom_init(argc, argv);
   al_install_keyboard();
+
+  if (!al_install_mouse()) {
+    fprintf(stderr, "failed to install mouse driver!\n");
+    return -1;
+  }
+
+  atom_init(argc, argv);
+
 
   int F1_pressed = 0;
   int F2_pressed = 0;
   int F3_pressed = 0;
+  int F11_pressed = 0;
   int oldsndddnoise;
 
   while (!quited) {
@@ -108,6 +121,7 @@ int main(int argc, char **argv)
 	      sndddnoise = oldsndddnoise;
 	      popup("RamRom Disabled", 120);
 	    }
+	    optima_gui_refresh();
 	    atom_reset(0);
 	    F2_pressed = 1;
 	  }
@@ -124,10 +138,26 @@ int main(int argc, char **argv)
 	    } else {
 	      popup("Disc Noise Disabled", 120);
 	    }
+	    optima_gui_refresh();
 	    F3_pressed = 1;
 	  }
       } else {
 	F3_pressed = 0;
+      }
+
+      // Toggle the Disc Noise if F3 is pressed
+      if (al_key_down(&key_state, ALLEGRO_KEY_F11)) {
+	  if (!F11_pressed) {
+	   show_menu =  !show_menu;
+	    if (show_menu) {
+	      popup("Menu Enabled", 120);
+	    } else {
+	      popup("Menu Disabled", 120);
+	    }
+	    F11_pressed = 1;
+	  }
+      } else {
+	F11_pressed = 0;
       }
 
       // Exit if F4 is pressed

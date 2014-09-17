@@ -182,6 +182,9 @@ void atom_init(int argc, char **argv)
 	al_register_event_source(eventQueue, al_get_timer_event_source(timer));
 	al_start_timer(timer);
 
+	al_register_event_source(eventQueue, al_get_mouse_event_source());
+
+	// al_register_event_source(eventQueue, al_get_keyboard_event_source());
 
 	rpclog("atom_init() done\n");
 }
@@ -204,6 +207,9 @@ void atom_run()
 
   ALLEGRO_EVENT e;
   al_wait_for_event(eventQueue, &e);
+
+  optima_gui_handleEvent(&e);
+
   //rpclog("atom_run() event type = %d\n", e.type;)
   count++;
 
@@ -212,9 +218,29 @@ void atom_run()
     need_redraw = true;
     ddframes++;
     drawscr++;
+
+    optima_gui_update();
+
+  }
+#if 0
+  else if (e.type == ALLEGRO_EVENT_MOUSE_AXES) {
+    ALLEGRO_MOUSE_STATE mouseState;
+    al_get_mouse_state(&mouseState);
+    rpclog("Mouse moved %d %d\n", mouseState.x, mouseState.y);
+  } else if (e.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
+    rpclog("Mouse button down\n");
+  } else if (e.type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) {
+    rpclog("Mouse button on\n");
+  } else if (e.type == ALLEGRO_EVENT_MOUSE_WARPED) {
+    rpclog("Mouse warped\n");
+  } else if (e.type == ALLEGRO_EVENT_MOUSE_ENTER_DISPLAY) {
+    rpclog("Mouse enter display\n");
+  } else if (e.type == ALLEGRO_EVENT_MOUSE_LEAVE_DISPLAY) {
+    rpclog("Mouse leave display\n");
   } else {
     rpclog("atom_run() unexpected event type = %d\n", e.type);
   }
+#endif
 
 
   if (need_redraw) {
@@ -232,7 +258,9 @@ void atom_run()
     double t1 = al_get_time();
 
     // Alse executes a frame's worth of 6502 code...
-    update_atom_display(colourboard ? 312 : 262, skip);
+    // Decided *not* to emulate 50Hz updates
+    // update_atom_display(colourboard ? 312 : 262, skip);
+    update_atom_display(262, skip);
     // rpclog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
 
     if (tapeon && fasttape)

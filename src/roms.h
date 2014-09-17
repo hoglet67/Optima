@@ -1,3 +1,8 @@
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
         Roms.h, defines for handling roms of Atomulator.
 
@@ -46,7 +51,11 @@
 #define RAMROM_FLAG_EXTRAM		0x01
 #define RAMROM_FLAG_BLKA_RAM	0x02
 #define RAMROM_FLAG_DISKROM		0x04
+#define RAMROM_FLAG_BBCMODE		0x08
 
 #define RR_bit_set(bit)			(0!=((RR_enables ^ RR_jumpers) & bit))
 #define RR_BLKA_enabled()		(0!=((RR_jumpers & RAMROM_FLAG_JMPDISK) ^ ((RR_enables & RAMROM_FLAG_BLKA_RAM)<<1)))
 
+#ifdef __cplusplus
+}
+#endif

@@ -1,5 +1,12 @@
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define MENU_FONT_SIZE 24
+#define POPUP_FONT_SIZE 72
+
 #define MAXPATH	512
 
 #define SNDBUFLEN 1024
@@ -15,16 +22,17 @@ int gfxmode;
 int css;
 int speaker;
 uint8_t lastdat;
-int cswena;
+extern int cswena;
 int cswpoint;
 
 //#define printf rpclog
 
-int colourboard;
-int bbcmode;
-int fasttape;
-int ramrom_enable;
-int RR_jumpers;
+extern int colourboard;
+extern int bbcmode;
+extern int fasttape;
+extern int ramrom_enable;
+extern int RR_jumpers;
+extern int quited;
 
 int interrupt;
 
@@ -132,6 +140,8 @@ extern int cursid;
 extern int sidmethod;
 extern unsigned char joyst;
 
+extern int show_menu;
+
 void opencsw(char *fn);
 void closecsw();
 int getcsw();
@@ -235,3 +245,7 @@ extern char scrshotname[260];
 extern int savescrshot;
 
 void changetimerspeed(int i);
+
+#ifdef __cplusplus
+}
+#endif
