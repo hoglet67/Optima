@@ -1344,7 +1344,8 @@ void TGUI_MenuBar::draw(int abs_x, int abs_y)
 {
 	setDefaultColors();
 
-	al_clear_to_color(back);
+	// Preventing the whole screen being cleared
+	// al_clear_to_color(back);
 
 	int xx = abs_x+PADDING;
 	
