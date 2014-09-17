@@ -1258,6 +1258,7 @@ void TGUI_SubMenuItem::mouseMove(int rel_x, int rel_y, int abs_x, int abs_y)
 	else if (!is_open && (rel_x >= 0 && rel_y >= 0)) {
 		sub_menu->setX((parent ? parent->getX() : 0)+x+width);
 		sub_menu->setY((parent ? parent->getY() : 0)+y);
+		sub_menu->layout();
 		tgui::addWidget(sub_menu);
 		is_open = true;
 
@@ -1328,14 +1329,16 @@ void TGUI_MenuBar::keyDown(int keycode)
 	}
 }
 
-void TGUI_MenuBar::setSubMenuSplitters(TGUI_Splitter *root)
+void TGUI_MenuBar::setSubMenuSplitters(TGUI_Splitter *root, TGUI_MenuBar *menuBar)
 {
 	std::vector<tgui::TGUIWidget *> &w = root->getWidgets();
 	for (unsigned int i = 0; i < w.size(); i++) {
-		TGUI_SubMenuItem *item = dynamic_cast<TGUI_SubMenuItem *>(w[i]);
-		if (item) {
-			item->setParentSplitter(root);
-			setSubMenuSplitters(item->getSubMenu());
+		TGUI_TextMenuItem *item1 = dynamic_cast<TGUI_TextMenuItem *>(w[i]);
+		item1->setMenuBar(menuBar);
+		TGUI_SubMenuItem *item2 = dynamic_cast<TGUI_SubMenuItem *>(w[i]);
+		if (item2) {
+			item2->setParentSplitter(root);
+			setSubMenuSplitters(item2->getSubMenu(), menuBar);
 		}
 	}
 }
@@ -1428,12 +1431,7 @@ TGUI_MenuBar::TGUI_MenuBar(
 	this->height = h;
 
 	for (unsigned int i = 0; i < menus.size(); i++) {
-		std::vector<tgui::TGUIWidget *> w = menus[i]->getWidgets();
-		for (unsigned int j = 0; j < w.size(); j++) {
-			TGUI_TextMenuItem *item = dynamic_cast<TGUI_TextMenuItem *>(w[j]);
-			item->setMenuBar(this);
-		}
-		setSubMenuSplitters(menus[i]);
+		setSubMenuSplitters(menus[i], this);
 	}
 }
 

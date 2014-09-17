@@ -284,7 +284,7 @@ public:
 		std::vector<TGUI_Splitter *> menus
 	);
 protected:
-	void setSubMenuSplitters(TGUI_Splitter *root);
+	void setSubMenuSplitters(TGUI_Splitter *root, TGUI_MenuBar *menuBar);
 	void checkKeys(int keycode, TGUI_Splitter *splitter);
 
 	std::vector<std::string> menu_names;
