@@ -4,9 +4,6 @@
 extern "C" {
 #endif
 
-#define MENU_FONT_SIZE 24
-#define POPUP_FONT_SIZE 72
-
 #define MAXPATH	512
 
 #define SNDBUFLEN 1024

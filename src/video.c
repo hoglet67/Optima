@@ -159,19 +159,25 @@ void initvideo()
 
   updatepal();
 
-  font = al_load_font("fonts/DejaVuSans.ttf", POPUP_FONT_SIZE, 0);
+  // Set the popup font to approx 40 columns
+  int popupFontSize = displayW / 40; 
+
+  // Set the menu font to approx 80 columns
+  int menuFontSize = displayW / 80; 
+
+  font = al_load_font("fonts/DejaVuSans.ttf", popupFontSize, 0);
 
   if (!font) {
     rpclog("Failed to load font\n");
   }
 
-  menufont = al_load_font("fonts/DejaVuSans.ttf", MENU_FONT_SIZE, 0);
+  menufont = al_load_font("fonts/DejaVuSans.ttf", menuFontSize, 0);
 
   if (!menufont) {
     rpclog("Failed to load menufont\n");
   }
 
-  optima_gui_init(display, menufont);
+  optima_gui_init(display, displayW, displayH, menufont, menuFontSize);
 
   //  al_grab_mouse(display);
   //if (!al_show_mouse_cursor(display)) {

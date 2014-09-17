@@ -1,12 +1,13 @@
 #include "tgui/tgui2.hpp"
 #include "tgui/tgui2_widgets.hpp"
 #include <allegro.h>
+#include <allegro_color.h>
 
 #include "atom.h"
 #include "roms.h"
 
 extern "C" {
-  void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font);
+  void optima_gui_init(ALLEGRO_DISPLAY *display, int displayW, int displayH, ALLEGRO_FONT *font, int menuFontSize);
   void optima_gui_handleEvent(ALLEGRO_EVENT *event);
   void optima_gui_refresh();
   void optima_gui_update();
@@ -57,6 +58,8 @@ TGUI_RadioMenuItem *settings_sound_ddvol_100;
 TGUI_TextMenuItem *settings_keyboard_redefine;
 TGUI_TextMenuItem *settings_keyboard_default;
 
+TGUI_TextMenuItem *misc_screenshot;
+
 TGUI_MenuBar *menuBar;
 
 TGUI_RadioGroup tapeSpeedGroup;
@@ -75,27 +78,30 @@ std::vector<tgui::TGUIWidget *> settingsSoundItems;
 std::vector<tgui::TGUIWidget *> settingsKeyboardItems;
 std::vector<tgui::TGUIWidget *> settingsSoundDDTypeItems;
 std::vector<tgui::TGUIWidget *> settingsSoundDDVolItems;
+std::vector<tgui::TGUIWidget *> miscItems;
 
 std::vector<std::string> menu_names;
 std::vector<TGUI_Splitter *> menu_splitters;
 
-void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font) {
+void optima_gui_init(ALLEGRO_DISPLAY *display, int displayW, int displayH, ALLEGRO_FONT *font, int menuFontSize) {
   tgui::init(display);
   tgui::setFont(font);
 
-  int menuWidth = 300;
+  tguiWidgetsSetColors(al_color_name("cyan"), al_color_name("darkgray"));
 
+  int menuWidth = displayW / 6;
+  int menuHeight = menuFontSize * 4 / 3;
 
   // Create the file menu
   fileItems.push_back(file_reset = new TGUI_TextMenuItem("Reset", 0)); 
   fileItems.push_back(file_exit = new TGUI_TextMenuItem("Exit", 0)); 
-  TGUI_Splitter *fileMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * fileItems.size(), TGUI_VERTICAL, true, fileItems);
+  TGUI_Splitter *fileMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * fileItems.size(), TGUI_VERTICAL, true, fileItems);
 
   // Create the tape speed menu
   tapeSpeedGroup.selected = 0;
   tapeSpeedItems.push_back(tape_speed_normal = new TGUI_RadioMenuItem("Normal", 0, &tapeSpeedGroup, 0));
   tapeSpeedItems.push_back(tape_speed_fast = new TGUI_RadioMenuItem("Fast", 0, &tapeSpeedGroup, 1));
-  TGUI_Splitter *tapeSpeedMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * tapeSpeedItems.size(), TGUI_VERTICAL, false, tapeSpeedItems);
+  TGUI_Splitter *tapeSpeedMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * tapeSpeedItems.size(), TGUI_VERTICAL, false, tapeSpeedItems);
 
   // Create the tape menu
   tapeItems.push_back(tape_load = new TGUI_TextMenuItem("Load tape...", 0));
@@ -103,7 +109,7 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font) {
   tapeItems.push_back(tape_rewind = new TGUI_TextMenuItem("Rewind tape", 0));
   tapeItems.push_back(tape_catalog = new TGUI_TextMenuItem("Show tape catalogue", 0));
   tapeItems.push_back(new TGUI_SubMenuItem("TapeSpeed", tapeSpeedMenu));
-  TGUI_Splitter *tapeMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * tapeItems.size(), TGUI_VERTICAL, false, tapeItems);
+  TGUI_Splitter *tapeMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * tapeItems.size(), TGUI_VERTICAL, false, tapeItems);
 
   // Create the disc menu
   discItems.push_back(disc_load0 = new TGUI_TextMenuItem("Load disc: 0/2...", 0));
@@ -115,35 +121,35 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font) {
   discItems.push_back(disc_writeprot0 = new TGUI_CheckMenuItem("Write protect disc: 0/2", 0, writeprot[0]));
   discItems.push_back(disc_writeprot1 = new TGUI_CheckMenuItem("Write protect disc: 1/3", 0, writeprot[1]));
   discItems.push_back(disc_defaultwriteprot = new TGUI_CheckMenuItem("Default write protect", 0, defaultwriteprot));
-  TGUI_Splitter *discMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * discItems.size(), TGUI_VERTICAL, false, discItems);
+  TGUI_Splitter *discMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * discItems.size(), TGUI_VERTICAL, false, discItems);
 
   // Create the settings/video menu
   settingsVideoItems.push_back(settings_video_snow = new TGUI_CheckMenuItem("Snow", 0, snow));
   settingsVideoItems.push_back(settings_video_fullscreen = new TGUI_CheckMenuItem("Fullscreen", 0, fullscreen));
-  TGUI_Splitter *settingsVideoMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * settingsVideoItems.size(), TGUI_VERTICAL, false, settingsVideoItems);
+  TGUI_Splitter *settingsVideoMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsVideoItems.size(), TGUI_VERTICAL, false, settingsVideoItems);
 
   // Create the settings/hardware menu
   settingsHardwareItems.push_back(settings_hardware_colourboard = new TGUI_CheckMenuItem("Colour Board", 0, colourboard));
   settingsHardwareItems.push_back(settings_hardware_bbcmode = new TGUI_CheckMenuItem("BBC BASIC", 0, bbcmode));
-  TGUI_Splitter *settingsHardwareMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * settingsHardwareItems.size(), TGUI_VERTICAL, false, settingsHardwareItems);
+  TGUI_Splitter *settingsHardwareMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsHardwareItems.size(), TGUI_VERTICAL, false, settingsHardwareItems);
   
   // Create the settings/ramrom menu
   settingsRamRomItems.push_back(settings_ramrom_ramrom = new TGUI_CheckMenuItem("RAM/ROM Enabled", 0, ramrom_enable));
   settingsRamRomItems.push_back(settings_ramrom_diskrom = new TGUI_CheckMenuItem("RAM/ROM Diskrom Enabled", 0, (RR_jumpers & RAMROM_FLAG_DISKROM)));
-  TGUI_Splitter *settingsRamRomMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * settingsRamRomItems.size(), TGUI_VERTICAL, false, settingsRamRomItems);
+  TGUI_Splitter *settingsRamRomMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsRamRomItems.size(), TGUI_VERTICAL, false, settingsRamRomItems);
 
   // Create the settings/sound/ddtype menu
   settingsSoundDDTypeGroup.selected = ddtype;
   settingsSoundDDTypeItems.push_back(settings_sound_ddtype_525 = new TGUI_RadioMenuItem("5.25", 0, &settingsSoundDDTypeGroup, 0));
   settingsSoundDDTypeItems.push_back(settings_sound_ddtype_35 = new TGUI_RadioMenuItem("3.5", 0, &settingsSoundDDTypeGroup, 1));
-  TGUI_Splitter *settingsSoundDDTypeMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * settingsSoundDDTypeItems.size(), TGUI_VERTICAL, false, settingsSoundDDTypeItems);
+  TGUI_Splitter *settingsSoundDDTypeMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsSoundDDTypeItems.size(), TGUI_VERTICAL, false, settingsSoundDDTypeItems);
 
   // Create the settings/sound/ddvol menu
   settingsSoundDDVolGroup.selected = ddvol - 1;
   settingsSoundDDVolItems.push_back(settings_sound_ddvol_33 = new TGUI_RadioMenuItem("33%", 0, &settingsSoundDDVolGroup, 0));
   settingsSoundDDVolItems.push_back(settings_sound_ddvol_66 = new TGUI_RadioMenuItem("66%", 0,  &settingsSoundDDVolGroup, 1));
   settingsSoundDDVolItems.push_back(settings_sound_ddvol_100 = new TGUI_RadioMenuItem("100%", 0,  &settingsSoundDDVolGroup, 2));
-  TGUI_Splitter *settingsSoundDDVolMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * settingsSoundDDVolItems.size(), TGUI_VERTICAL, false, settingsSoundDDVolItems);
+  TGUI_Splitter *settingsSoundDDVolMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsSoundDDVolItems.size(), TGUI_VERTICAL, false, settingsSoundDDVolItems);
 
   // Create the settings/sound menu
   settingsSoundItems.push_back(settings_sound_internalspeaker = new TGUI_CheckMenuItem("Internal speaker", 0, spon));
@@ -152,12 +158,12 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font) {
   settingsSoundItems.push_back(settings_sound_discnoise = new TGUI_CheckMenuItem("Disc drive noise", 0, sndddnoise));
   settingsSoundItems.push_back(new TGUI_SubMenuItem("Disc drive type", settingsSoundDDTypeMenu));
   settingsSoundItems.push_back(new TGUI_SubMenuItem("Disc drive vol", settingsSoundDDVolMenu));
-  TGUI_Splitter *settingsSoundMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * settingsSoundItems.size(), TGUI_VERTICAL, false, settingsSoundItems);
+  TGUI_Splitter *settingsSoundMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsSoundItems.size(), TGUI_VERTICAL, false, settingsSoundItems);
 
   // Create the settings/keyboard menu
   settingsRamRomItems.push_back(settings_keyboard_redefine = new TGUI_TextMenuItem("Redefine keys...", 0));
   settingsRamRomItems.push_back(settings_keyboard_default = new TGUI_TextMenuItem("Default mapping", 0));
-  TGUI_Splitter *settingsKeyboardMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * settingsKeyboardItems.size(), TGUI_VERTICAL, false, settingsKeyboardItems);
+  TGUI_Splitter *settingsKeyboardMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsKeyboardItems.size(), TGUI_VERTICAL, false, settingsKeyboardItems);
 
   // Create the settings menu
   settingsItems.push_back(new TGUI_SubMenuItem("Video", settingsVideoMenu));
@@ -165,18 +171,24 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font) {
   settingsItems.push_back(new TGUI_SubMenuItem("RamRom", settingsRamRomMenu));
   settingsItems.push_back(new TGUI_SubMenuItem("Sound", settingsSoundMenu));
   settingsItems.push_back(new TGUI_SubMenuItem("Keyboard", settingsKeyboardMenu));
-  TGUI_Splitter *settingsMenu = new TGUI_Splitter(0, 0, menuWidth, MENU_FONT_SIZE * settingsItems.size(), TGUI_VERTICAL, false, settingsItems);
+  TGUI_Splitter *settingsMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsItems.size(), TGUI_VERTICAL, false, settingsItems);
+
+  // Create the misc menu
+  miscItems.push_back(misc_screenshot = new TGUI_TextMenuItem("Save screenshot", 0));
+  TGUI_Splitter *miscMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * miscItems.size(), TGUI_VERTICAL, false, miscItems);
 
   // Create the menu bar
-  menu_names.push_back("Settings    ");
-  menu_splitters.push_back(settingsMenu);
   menu_names.push_back("File        ");
   menu_splitters.push_back(fileMenu);
   menu_names.push_back("Tape        ");
   menu_splitters.push_back(tapeMenu);
   menu_names.push_back("Disc        ");
   menu_splitters.push_back(discMenu);
-  menuBar = new TGUI_MenuBar(0, 0, 1920, MENU_FONT_SIZE, menu_names, menu_splitters);
+  menu_names.push_back("Settings    ");
+  menu_splitters.push_back(settingsMenu);
+  menu_names.push_back("Misc        ");
+  menu_splitters.push_back(miscMenu);
+  menuBar = new TGUI_MenuBar(0, 0, displayW, menuHeight, menu_names, menu_splitters);
 
   // Add the menu bar
   tgui::setNewWidgetParent(0);
@@ -340,9 +352,9 @@ void optima_gui_update() {
     for (c = 0; c < 128; c++)
       keylookup[c] = c;
   }
-
-
-  // Disk menu actions
+  if (ret == misc_screenshot) {
+    popup("Not yet implemented!!!", 120);
+  }
 
 
   if (resetit) {

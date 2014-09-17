@@ -3,7 +3,7 @@ CPP  = g++-4.7
 CC   = gcc-4.7
 #WINDRES = windres.exe
 CFLAGS = -O3 -mfpu=vfp -mfloat-abi=hard -ffast-math -fomit-frame-pointer -falign-loops -falign-jumps -falign-functions -I/usr/local/include -I/usr/local/include/allegro5
-CXXFLAGS = -Wno-write-strings
+CXXFLAGS = -O3 -Wno-write-strings  -I/usr/local/include -I/usr/local/include/allegro5
 
 # -march=i686 -ggdb
 OBJ = 6502.o 6502asm.o 6522via.o 8255.o 8271.o atom.o config.o csw.o debugger.o disc.o fdi.o fdi2raw.o soundopenal.o ssd.o uef.o video.o linux.o linux-gui.o resid.o ddnoise.o tgui/tgui2.o tgui/tgui2_widgets.o gui.o
