@@ -208,7 +208,9 @@ void atom_run()
   ALLEGRO_EVENT e;
   al_wait_for_event(eventQueue, &e);
 
-  optima_gui_handleEvent(&e);
+  if (show_menu) {
+    optima_gui_handleEvent(&e);
+  }
 
   //rpclog("atom_run() event type = %d\n", e.type;)
   count++;
@@ -219,7 +221,9 @@ void atom_run()
     ddframes++;
     drawscr++;
 
-    optima_gui_update();
+    if (show_menu) {
+      optima_gui_update();
+    }
 
   }
 #if 0
