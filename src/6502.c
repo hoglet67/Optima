@@ -62,7 +62,7 @@ void set_rr_ptrs()
       int forcePage = 0;
 
       // Has the beeb mode bit changed?
-      if ((RR_enables & 8) != (last_RR_enables & 8)) {
+      if (last_RR_enables < 0 || (RR_enables & 8) != (last_RR_enables & 8)) {
 	if (RR_enables & 8) {
 	  rpclog("loading bbc roms\n");
 	  memcpy(the_cpu->mem + 0x7000, roms_ramrom + 0x19000,  ROM_SIZE_ATOM);
@@ -152,7 +152,7 @@ void loadroms()
 
 void reset_rom()
 {
-  rpclog("reset_rom(), ramrom=%d\n", ramrom_enable);
+  rpclog("reset_rom(), ramrom=%d, bbcmode=%d\n", ramrom_enable, bbcmode);
   if (ramrom_enable) {
     last_RR_bankreg = -1;
     last_RR_enables = -1;

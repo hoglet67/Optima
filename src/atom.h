@@ -29,6 +29,7 @@ extern int bbcmode;
 extern int fasttape;
 extern int ramrom_enable;
 extern int RR_jumpers;
+extern int RR_enables;
 extern int quited;
 
 int interrupt;
@@ -221,6 +222,7 @@ extern int keylookup[128];
 
 void loadconfig();
 void saveconfig();
+void set_rr_ptrs();
 
 extern int snow;
 extern int fullscreen;

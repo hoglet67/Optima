@@ -294,11 +294,12 @@ void optima_gui_update() {
   }
   if (ret == settings_hardware_bbcmode) {
     bbcmode = settings_hardware_bbcmode->isChecked();
-    if (settings_ramrom_diskrom->isChecked()) {
-      RR_jumpers |= RAMROM_FLAG_BBCMODE;
+    if (bbcmode) {
+      RR_enables |= RAMROM_FLAG_BBCMODE;
     } else {
-      RR_jumpers &= ~RAMROM_FLAG_BBCMODE;
+      RR_enables &= ~RAMROM_FLAG_BBCMODE;
     }
+    set_rr_ptrs();
     resetit = 1;
   }
   if (ret == settings_ramrom_ramrom) {

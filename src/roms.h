@@ -49,7 +49,7 @@ extern "C" {
 
 // RAMROM bitmaps for 0xBFFE
 #define RAMROM_FLAG_EXTRAM		0x01
-#define RAMROM_FLAG_BLKA_RAM	0x02
+#define RAMROM_FLAG_BLKA_RAM		0x02
 #define RAMROM_FLAG_DISKROM		0x04
 #define RAMROM_FLAG_BBCMODE		0x08
 

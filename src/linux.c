@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <allegro.h>
 #include "atom.h"
+#include "roms.h"
 
 int quited = 0;
 
@@ -73,8 +74,13 @@ int main(int argc, char **argv)
 
   loadconfig();
 
-  if (defaultwriteprot)
+  if (bbcmode) {
+    RR_enables |= RAMROM_FLAG_BBCMODE;
+  }
+
+  if (defaultwriteprot) {
     writeprot[0] = writeprot[1] = 1;
+  }
 
   al_install_keyboard();
 
