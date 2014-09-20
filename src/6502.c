@@ -284,7 +284,11 @@ void reset6502()
 	the_cpu->pc=*(uint16_t*)&(the_cpu->mem[0xfffc]);
 	the_cpu->p |= FLAG_I;
 	the_cpu->nmi =0;
-	//output=0;
+
+	the_cpu->tapeon = 0;
+	the_cpu->pc_tapeon = 0xFB8E;
+	the_cpu->pc_tapeoff = 0xC2CF;
+
 	rpclog("\n\n6502 RESET, pc=%04x!\n", the_cpu->pc);
 }
 
@@ -1202,6 +1206,11 @@ void update_atom_display(int linenum, int skip)
       exec6502();
       // Generate 128 cycles with of sound (4 samples at 31250Hz)
       pollsound();
+
+      tapecyc -= 512;
+      if (tapecyc < 0) {
+	polltape();
+      }
       // Update the via, etc
       do_poll(the_cpu, 128);
     }

@@ -9,6 +9,7 @@ extern M6502* the_cpu;
 
 int16_t sndbuffer[SNDBUFLEN * 2];
 int16_t sidbuffer[SNDBUFLEN];
+int16_t tapbuffer[SNDBUFLEN];
 int16_t last_val = 0;
 int     last_cyclecount = 0;
 
@@ -16,11 +17,10 @@ int     last_cyclecount = 0;
 /*SWARM - CTRL=LEFT, ADJ=RIGHT, REPT=FIRE*/
 /*PINBALL - SHIFT,REPT*/
 int output;
-int tapecyc;
+int tapecyc = 0;
 int inchunk;
 int intone = 0, tapedat, hightone = 0;
 int bytevalid = 0, bitvalid = 0;
-int tapeon = 0;
 uint16_t databyte;
 
 uint16_t pc;
@@ -200,7 +200,8 @@ void polltape()
 {
 	if (cswena)
 	{
-		if (tapeon)
+
+		if (the_cpu->tapeon)
 		{
 			tapecyc += getcsw();
 			tapedat = !tapedat;
@@ -208,9 +209,9 @@ void polltape()
 	}
 	else
 	{
-		tapecyc += 794;
-		intone ^= 0x10;
-		if (tapeon)
+	  	tapecyc += 794;
+	  	intone ^= 0x10;
+		if (the_cpu->tapeon)
 		{
 			if (hightone)
 			{
@@ -274,6 +275,7 @@ void pollsound()
   int i;
   int cycle_count = (the_cpu->cyclesTotal >> 5) % SNDBUFLEN;
 
+
   // Detect when we have moved from one sound buffer to the other (i.e. cycle_count has wrapped)
   if (cycle_count < last_cyclecount) {
 
@@ -301,11 +303,29 @@ void pollsound()
       }
     }
 
+    // Add in the Tape data
+    if (tpon) {
+      int16_t *sndptr = sndbuffer + offset;
+      int16_t *tapptr = tapbuffer;
+      for (i = 0; i < SNDBUFLEN; i++) {
+	*sndptr++ += *tapptr++;
+      }
+    }
+
     // Send to the OpenAL sound API
     givealbuffer(sndbuffer + offset);
 
     // Reset the buffer back to 0's again
     memset(sndbuffer + offset, 0, SNDBUFLEN * 2);
+  }
+
+
+  if (tpon) {
+    temp = (tapedat) ? 2047 : -2048;
+    tapbuffer[cycle_count] = temp;
+    tapbuffer[cycle_count + 1] = temp;
+    tapbuffer[cycle_count + 2] = temp;
+    tapbuffer[cycle_count + 3] = temp;
   }
 
   // The SID code was setup to generate one sample per line

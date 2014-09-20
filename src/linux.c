@@ -92,9 +92,13 @@ int main(int argc, char **argv)
   atom_init(argc, argv);
 
 
+
+#ifdef FUNCTION_KEYS
   int F1_pressed = 0;
   int F2_pressed = 0;
   int F3_pressed = 0;
+#endif
+
   int F11_pressed = 0;
   int oldsndddnoise;
 
@@ -103,6 +107,8 @@ int main(int argc, char **argv)
       // Poll the keyboard
       al_get_keyboard_state(&key_state);
 
+
+#ifdef FUNCTION_KEYS
 
       // Toggle the pallette if F1 is pressed
       if (al_key_down(&key_state, ALLEGRO_KEY_F1)) {
@@ -114,7 +120,6 @@ int main(int argc, char **argv)
 	F1_pressed = 0;
       }
 
-
       // Toggle the ramrom support if F2 is pressed
       if (al_key_down(&key_state, ALLEGRO_KEY_F2)) {
 	  if (!F2_pressed) {
@@ -122,10 +127,10 @@ int main(int argc, char **argv)
 	    if (ramrom_enable) {
 	      oldsndddnoise = sndddnoise;
 	      sndddnoise = 0;
-	      popup("RamRom Enabled", 120);
+	      popup(POPUP_TIME, "RamRom Enabled");
 	    } else {
 	      sndddnoise = oldsndddnoise;
-	      popup("RamRom Disabled", 120);
+	      popup(POPUP_TIME, "RamRom Disabled");
 	    }
 	    optima_gui_refresh();
 	    atom_reset(0);
@@ -140,9 +145,9 @@ int main(int argc, char **argv)
 	  if (!F3_pressed) {
 	    sndddnoise =  !sndddnoise;
 	    if (sndddnoise) {
-	      popup("Disc Noise Enabled", 120);
+	      popup(POPUP_TIME, "Disc Noise Enabled");
 	    } else {
-	      popup("Disc Noise Disabled", 120);
+	      popup(POPUP_TIME, "Disc Noise Disabled");
 	    }
 	    optima_gui_refresh();
 	    F3_pressed = 1;
@@ -150,27 +155,28 @@ int main(int argc, char **argv)
       } else {
 	F3_pressed = 0;
       }
+#endif
+
+      // Exit if F4 is pressed
+      if (al_key_down(&key_state, ALLEGRO_KEY_F4)) {
+	quited = 1;
+      }
 
       // Toggle the Disc Noise if F3 is pressed
       if (al_key_down(&key_state, ALLEGRO_KEY_F11)) {
 	  if (!F11_pressed) {
 	   show_menu =  !show_menu;
 	    if (show_menu) {
-	      popup("Menu Enabled", 120);
+	      popup(POPUP_TIME, "Menu enabled");
 	    } else {
-	      popup("Menu Disabled", 120);
+	      popup(POPUP_TIME, "Menu disabled");
 	    }
 	    F11_pressed = 1;
 	  }
       } else {
 	F11_pressed = 0;
       }
-
-      // Exit if F4 is pressed
-      if (al_key_down(&key_state, ALLEGRO_KEY_F4)) {
-	quited = 1;
-      }
-    }
+  }
   atom_exit();
   return 0;
 }

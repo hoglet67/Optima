@@ -9,7 +9,7 @@
 void findfilenamescsw();
 int cswena = 0;
 int cintone = 1, cindat = 0, datbits = 0, enddat = 0;
-FILE *cswf;
+FILE *cswf = NULL;
 char csws[256];
 FILE *cswlog;
 int cswrate;
@@ -27,10 +27,7 @@ void opencsw(char *fn)
 	uint32_t destlen = 8 * 1024 * 1024;
 	uint8_t *tempin;
 
-	if (cswf)
-		fclose(cswf);
-	if (cswdat)
-		free(cswdat);
+	closecsw();
 	cswena = 1;
 	/*Allocate buffer*/
 	cswdat = malloc(8 * 1024 * 1024);
@@ -52,6 +49,7 @@ void opencsw(char *fn)
 	tempin = malloc(end);
 	fread(tempin, end, 1, cswf);
 	fclose(cswf);
+	cswf = NULL;
 	/*Decompress*/
 	uncompress(cswdat, (uLongf*)&destlen, tempin, end);
 	free(tempin);

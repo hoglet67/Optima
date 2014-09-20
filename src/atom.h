@@ -8,6 +8,9 @@ extern "C" {
 
 #define SNDBUFLEN 1024
 
+#define POPUP_TIME 60
+#define POPUP_DECAY 32
+
 void rpclog(char *format, ...);
 extern char exedir[MAXPATH+1];
 
@@ -31,6 +34,21 @@ extern int ramrom_enable;
 extern int RR_jumpers;
 extern int RR_enables;
 extern int quited;
+extern int displayW;
+extern int displayH;
+
+#define ID_DISK0 0
+#define ID_DISK1 1
+#define ID_TAPE  2
+
+#define NUM_IDS 3
+
+extern char ejecttext[NUM_IDS][260];
+void setejecttext(int id, const char *fn);
+
+extern int tapecyc;
+
+extern int sndtape;
 
 int interrupt;
 
@@ -109,8 +127,6 @@ extern int defaultwriteprot;
 extern char discfns[2][260];
 
 
-void setejecttext(int drive, char *fn);
-
 void loaddiscsamps();
 void mixddnoise();
 extern int ddvol, ddtype;
@@ -167,7 +183,7 @@ void loadroms();
 void dumpram();
 
 void initvideo();
-void popup(char *message, int time);
+void popup(int time, char *message, ...);
 void drawline(int l);
 void updatepal();
 

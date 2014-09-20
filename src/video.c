@@ -108,9 +108,11 @@ int displayH;
 char popup_message[255];
 int popup_time = 0;
 
-
-void popup(char *message, int time) {
-  strcpy(popup_message, message);
+void popup(int time, char *message, ...) {
+  va_list ap;
+  va_start(ap, message);
+  vsprintf(popup_message, message, ap);
+  va_end(ap);
   popup_time = time;
 }
 
@@ -177,12 +179,10 @@ void initvideo()
     rpclog("Failed to load menufont\n");
   }
 
-  optima_gui_init(display, displayW, displayH, menufont, menuFontSize);
+  optima_gui_init(display, menufont, menuFontSize);
 
-  //  al_grab_mouse(display);
-  //if (!al_show_mouse_cursor(display)) {
-  //  rpclog("Failed to show mouse cursor\n");
-  //}
+  // Start the mouse in the top left corner
+  al_set_mouse_xy(display, 0, 0);
 
 }
 
@@ -270,13 +270,12 @@ void togglepal() {
   colourboard = 1 - colourboard;
   updatepal();
   if (colourboard) {
-      popup("Colour Palette", 120);
+    popup(120, "Colour Palette");
   } else {
-      popup("Monochrome Palette", 120);
+    popup(120, "Monochrome Palette");
   }
 }
 
-int tapeon;
 int frmcount;
 int fskipcount = 0;
 
@@ -554,7 +553,7 @@ void drawline(int line)
 			savescrshot = 0;
 		}
 
-		if ((!(tapeon && fasttape) && fskipcount >= fskipmax) || frmcount == 60)
+		if ((!(the_cpu->tapeon && fasttape) && fskipcount >= fskipmax) || frmcount == 60)
 		{
 			fskipcount = 0;
 
@@ -575,7 +574,7 @@ void drawline(int line)
 
 			// If a popup is active, then render it
 			if (popup_time) {
-			  float a = popup_time >= 32 ? 1.0 : popup_time / 32.0;
+			  float a = popup_time >= POPUP_DECAY ? 1.0 : popup_time / (float) POPUP_DECAY;
 			  al_draw_text(font, al_map_rgba_f(a, 0.0, 0.0, a), (displayW >> 1), (displayH >> 1), ALLEGRO_ALIGN_CENTRE, popup_message);
 			  popup_time--;
 			}

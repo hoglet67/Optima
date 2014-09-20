@@ -52,7 +52,6 @@ void rpclog(char *format, ...)
 	fflush(rlog);
 }
 
-int tapeon;
 //uint8_t *ram;
 char filelist[256][17];
 int filelistsize;
@@ -184,7 +183,7 @@ void atom_init(int argc, char **argv)
 
 	al_register_event_source(eventQueue, al_get_mouse_event_source());
 
-	// al_register_event_source(eventQueue, al_get_keyboard_event_source());
+	al_register_event_source(eventQueue, al_get_keyboard_event_source());
 
 	rpclog("atom_init() done\n");
 }
@@ -208,16 +207,14 @@ void atom_run()
   ALLEGRO_EVENT e;
   al_wait_for_event(eventQueue, &e);
 
-  if (show_menu) {
-    optima_gui_handleEvent(&e);
-  }
 
   //rpclog("atom_run() event type = %d\n", e.type;)
-  count++;
 
   if (e.type == ALLEGRO_EVENT_TIMER) {
 
     need_redraw = true;
+
+    count++;
     ddframes++;
     drawscr++;
 
@@ -225,27 +222,11 @@ void atom_run()
       optima_gui_update();
     }
 
-  }
-#if 0
-  else if (e.type == ALLEGRO_EVENT_MOUSE_AXES) {
-    ALLEGRO_MOUSE_STATE mouseState;
-    al_get_mouse_state(&mouseState);
-    rpclog("Mouse moved %d %d\n", mouseState.x, mouseState.y);
-  } else if (e.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
-    rpclog("Mouse button down\n");
-  } else if (e.type == ALLEGRO_EVENT_MOUSE_BUTTON_UP) {
-    rpclog("Mouse button on\n");
-  } else if (e.type == ALLEGRO_EVENT_MOUSE_WARPED) {
-    rpclog("Mouse warped\n");
-  } else if (e.type == ALLEGRO_EVENT_MOUSE_ENTER_DISPLAY) {
-    rpclog("Mouse enter display\n");
-  } else if (e.type == ALLEGRO_EVENT_MOUSE_LEAVE_DISPLAY) {
-    rpclog("Mouse leave display\n");
   } else {
-    rpclog("atom_run() unexpected event type = %d\n", e.type);
+    if (show_menu) {
+      optima_gui_handleEvent(&e);
+    }
   }
-#endif
-
 
   if (need_redraw) {
 
@@ -266,7 +247,7 @@ void atom_run()
     update_atom_display(262, skip);
     // rpclog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
 
-    if (tapeon && fasttape)
+    if (the_cpu->tapeon && fasttape)
       drawscr = 0;
     else
       drawscr -= 1;

@@ -30,13 +30,16 @@ typedef struct {
   uint8_t y;    // +24
   uint8_t s;    // +25
   uint8_t p;    // +26
-  uint8_t unused; //
+  uint8_t unused; // +27
   int interrupt; // +28
   int nmi;	  // +32
   int takeint;  // +36
   int cycles;   // +40
   uint16_t pc_trigger_hit; //+44
-  uint16_t pc_triggers[4]; //+46
+  uint16_t pc_triggers[2]; //+46
+  uint16_t pc_tapeon; //+50
+  uint16_t pc_tapeoff; //+52  
+  uint16_t tapeon; //+54
   uint32_t cyclesTotal;	// +56
 } M6502;
 
