@@ -184,6 +184,9 @@ protected:
 	bool drawFocus;
 };
 
+void setMenuPad(int pad);
+int getMenuPad();
+
 long currentTimeMillis();
 void init(ALLEGRO_DISPLAY *display);
 void shutdown();

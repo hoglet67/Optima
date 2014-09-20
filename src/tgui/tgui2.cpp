@@ -20,6 +20,16 @@ static void drawRect(tgui::TGUI *gui, int x1, int y1, int x2, int y2);
 
 namespace tgui {
 
+int menuPad = 0;
+
+void setMenuPad(int pad) {
+  menuPad = pad;
+}
+
+int getMenuPad() {
+  return menuPad;
+}
+
 static TGUIWidget *getWidgetInDirection(TGUIWidget *widget, int xdir, int ydir);
 
 static ALLEGRO_DISPLAY *display;

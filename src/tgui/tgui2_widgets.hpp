@@ -182,11 +182,12 @@ class TGUI_MenuBar;
 class TGUI_TextMenuItem : public TGUI_Extended_Widget
 {
 public:
-	static const int HEIGHT = 16;
+	static const int HEIGHT = 32;
 
 	virtual void close() {};
 	void setMenuBar(TGUI_MenuBar *menuBar);
 	int getShortcutKeycode();
+	void setName(std::string n);
 
 	virtual void draw(int abs_x, int abs_y);
 	virtual tgui::TGUIWidget *update();
@@ -269,7 +270,7 @@ class TGUI_MenuBar : public TGUI_Extended_Widget
 {
 public:
 	static const int PADDING = 10;
-	static const int HEIGHT = 16;
+	static const int HEIGHT = 32;
 	
 	void close();
 
@@ -409,6 +410,7 @@ public:
 	void mouseMove(int rel_x, int rel_y, int abs_x, int abs_y);
 	void draw(int abs_x, int abs_y);
 	bool getAbsoluteChildPosition(tgui::TGUIWidget *widget, int *x, int *y);
+	void setTitle(std::string t);
 
 	int barHeight();
 
