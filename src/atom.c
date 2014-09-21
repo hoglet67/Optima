@@ -198,6 +198,7 @@ void changetimerspeed(int i)
 int oldf12 = 0;
 int count = 0;
 int skipped = 0;
+int menu_timer = 0;
 
 void atom_run()
 {
@@ -209,7 +210,7 @@ void atom_run()
 
 
   //rpclog("atom_run() event type = %d\n", e.type;)
-
+  
   if (e.type == ALLEGRO_EVENT_TIMER) {
 
     need_redraw = true;
@@ -217,16 +218,23 @@ void atom_run()
     count++;
     ddframes++;
     drawscr++;
-
+    menu_timer--;
+    if (menu_timer == 0) {
+      show_menu = false;
+    }
     if (show_menu) {
       optima_gui_update();
     }
 
   } else {
+    if (e.type == ALLEGRO_EVENT_MOUSE_AXES || show_menu) {
+      show_menu = true;
+      menu_timer = 120;
+    }
     if (show_menu) {
       optima_gui_handleEvent(&e);
     }
-  }
+  } 
 
   if (need_redraw) {
 
