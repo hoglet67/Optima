@@ -11,7 +11,6 @@
 #define ID_ENTER_DISK0  4
 #define ID_ENTER_DISK1  5
 
-int id;
 
 extern "C" {
   void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontSize);
@@ -26,9 +25,9 @@ extern "C" {
   int fskipmax = 0;
 }
 
-void gui_file_browser(char *title, char *dirpath, int mode);
+void file_browser_open(std::string title, std::string dirpath, int mode);
 
-void gui_file_enterer(char *title, char *dirpath, int mode);
+void file_browser_close();
 
 char ejecttext[3][260] = { "Eject disc :0/2", "Eject disc :1/3", "Eject tape" };
 
@@ -53,14 +52,17 @@ void setquit()
 {
 }
 
-TGUI_Frame *fileEnterer;
+// Widgets for the file browser
+int id;
+std::string browserTitle;
 TGUI_Frame *fileBrowser;
 TGUI_Button *buttonOK;
 TGUI_Button *buttonCancel;
 TGUI_List *fileList;
-TGUI_TextField *textField;
+TGUI_TextField *dirName;
+TGUI_TextField *fileName;
 
-
+// Widgets for the menus
 
 TGUI_TextMenuItem *file_reset;
 TGUI_TextMenuItem *file_exit;
@@ -113,6 +115,9 @@ TGUI_MenuBar *menuBar;
 TGUI_RadioGroup tapeSpeedGroup;
 TGUI_RadioGroup settingsSoundDDTypeGroup;
 TGUI_RadioGroup settingsSoundDDVolGroup;
+
+std::vector<tgui::TGUIWidget *> buttonItems;
+std::vector<tgui::TGUIWidget *> browserItems;
 
 std::vector<tgui::TGUIWidget *> fileItems;
 std::vector<tgui::TGUIWidget *> tapeSpeedItems;
@@ -177,8 +182,8 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontS
   discItems.push_back(disc_load1 = new TGUI_TextMenuItem("Load disc: 1/3...", 0));
   discItems.push_back(disc_eject0 = new TGUI_TextMenuItem(ejecttext[ID_DISK0], 0));
   discItems.push_back(disc_eject1 = new TGUI_TextMenuItem(ejecttext[ID_DISK1], 0));
-  discItems.push_back(disc_new0 = new TGUI_TextMenuItem("New disc: 0/2", 0));
-  discItems.push_back(disc_new1 = new TGUI_TextMenuItem("New disc: 1/3", 0));
+  discItems.push_back(disc_new0 = new TGUI_TextMenuItem("New disc: 0/2...", 0));
+  discItems.push_back(disc_new1 = new TGUI_TextMenuItem("New disc: 1/3...", 0));
   discItems.push_back(disc_writeprot0 = new TGUI_CheckMenuItem("Write protect disc: 0/2", 0, 0));
   discItems.push_back(disc_writeprot1 = new TGUI_CheckMenuItem("Write protect disc: 1/3", 0, 0));
   discItems.push_back(disc_defaultwriteprot = new TGUI_CheckMenuItem("Default write protect", 0, 0));
@@ -267,42 +272,70 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontS
   tgui::setNewWidgetParent(0);
   tgui::addWidget(menuBar);
 
-  // Create the file navigator components
-
+  // Size the file navigator components
   int panelW = displayW / 2;
   int panelH = displayH / 2;
   int panelX = (displayW - panelW) / 2;
   int panelY = (displayH - panelH) / 2;
-  int buttonOffset = panelW / 3;
   int buttonW = fontSize * 10;
   int buttonH = fontSize;
 
-  // Create the List widget
-  fileList = new TGUI_List(0, 0, 0);
-
-  // Create the File Browser Franme
+  // Top Level Widget
   fileBrowser = new TGUI_Frame("", panelX, panelY, panelW, panelH);
 
-  // Create the scroll pane
+  // Directory Name
+  dirName = new TGUI_TextField("", 0, 0, panelW);  
+  int dirNameH = dirName->getHeight();
+
+  // File Name
+  fileName = new TGUI_TextField("", 0, 0, panelW);  
+  int fileNameH = fileName->getHeight();
+
+  // Scrolling File List
+  // TODO: the correct calculation for scrollH would also subtracy barHeight()
+  // Need to understand why things get sized incorrectly if this is done
+  // I suspect a bug in TGUI_Frame with the handling of the top bar
+  int scrollH = panelH - dirNameH - fileNameH - buttonH; // - fileBrowser->barHeight();
+  fileList = new TGUI_List(0, 0, 0);
   TGUI_ScrollPane *scrollPane = new TGUI_ScrollPane(fileList);
   scrollPane->setX(0);
-  scrollPane->setY(fileBrowser->barHeight());
+  scrollPane->setY(0);
   scrollPane->setWidth(panelW);
-  scrollPane->setHeight(panelH - fileBrowser->barHeight() - buttonH * 2);
+  scrollPane->setHeight(scrollH);
   fileList->setWidth(panelW - scrollPane->SCROLLBAR_THICKNESS);
 
-  fileBrowser->setChild(scrollPane);
+  // Buttons
+  buttonOK = new TGUI_Button("OK", 0, 0, buttonW, buttonH);
+  buttonCancel = new TGUI_Button("Cancel", 0, 0, buttonW, buttonH);
 
-  //Create the file Browser OK and Cancel Buttons
-  buttonOK = new TGUI_Button("OK", displayW / 2 - buttonOffset - buttonW / 2, panelY + panelH - buttonH * 3 / 2, buttonW, buttonH);
-  buttonCancel = new TGUI_Button("Cancel", displayW / 2 + buttonOffset - buttonW / 2, panelY + panelH - buttonH * 3 / 2, buttonW, buttonH);
+  // Button Splitter
+  buttonItems.push_back(buttonOK);
+  buttonItems.push_back(buttonCancel);
+  TGUI_Splitter *buttonSplitter = new TGUI_Splitter(0, 0, panelW, buttonH, TGUI_HORIZONTAL, true, buttonItems);
+  buttonSplitter->set_size(0, panelW / 2);
+  buttonSplitter->set_size(1, panelW / 2);
 
+  // Browser Spliltter
+  browserItems.push_back(dirName);
+  browserItems.push_back(scrollPane);
+  browserItems.push_back(fileName);
+  browserItems.push_back(buttonSplitter);
 
-  // Create the File Enterer Widges
-  fileEnterer = new TGUI_Frame("", panelX, panelY, panelW, panelH);
-  textField = new TGUI_TextField("", 0, fileEnterer->barHeight(), panelW);  
-  fileEnterer->setChild(textField);
+  TGUI_Splitter *browserSplitter = new TGUI_Splitter(0, fileBrowser->barHeight(), panelW, panelH - fileBrowser->barHeight(), TGUI_VERTICAL, true, browserItems);
+  browserSplitter->set_size(0, dirNameH);
+  browserSplitter->set_size(1, scrollH);
+  browserSplitter->set_size(2, fileNameH);
+  browserSplitter->set_size(3, buttonH);
 
+  // File Browser
+  fileBrowser->setChild(browserSplitter);
+
+  // printf("panelH    = %d\n", panelH);
+  // printf("barH      = %d\n", fileBrowser->barHeight());
+  // printf("scrollH   = %d\n", scrollH);
+  // printf("fileNameH = %d\n", fileNameH);
+  // printf("dirNameH  = %d\n", dirNameH);
+  // printf("buttonH   = %d\n", buttonH);
 }
 
 void optima_gui_refresh() {
@@ -336,66 +369,143 @@ void optima_gui_update() {
   tgui::TGUIWidget *ret = tgui::update();
   if (!ret) {
     return;
-  }
-  if (ret == file_reset) {
+
+  } else if (ret == fileList) {
+    fileName->setText(files[fileList->getSelected()]);
+
+  } else if (ret == buttonOK || ret == buttonCancel) {
+    bool reopen = false;
+
+    std::string selectedstr;
+    std::string filestr = fileName->getText();
+    std::string dirstr = dirName->getText();
+
+    // Strip trailing "/"
+    if (filestr.length() > 0 && filestr.rfind("/") == filestr.length() - 1) {
+      filestr.erase(filestr.length() - 1, 1);
+    }
+    if (filestr.compare("..") == 0) {
+      // Special case .. by removing the last directory component
+      selectedstr = dirstr.substr(0, dirstr.rfind("/"));
+    } else if (filestr.length() > 0) {
+      // No selection was made
+      selectedstr = dirstr + "/" + filestr;
+    } else {
+      // Otherwise concatenate the directory and the file
+      selectedstr = dirstr;
+    }
+    const char *selected = selectedstr.c_str();
+    printf("select = >%s<\n", selected);
+    if (ret == buttonOK) {
+      // Form a path
+      ALLEGRO_FS_ENTRY *fileEntry = al_create_fs_entry(selected);
+      printf("fileEntry = %s\n", al_get_fs_entry_name(fileEntry));
+      bool isExisting = al_fs_entry_exists(fileEntry);
+      bool isDir = al_get_fs_entry_mode(fileEntry) & ALLEGRO_FILEMODE_ISDIR;
+      printf("isDir = %d isExisting = %d\n", (int) isDir, (int) isExisting);
+      al_destroy_fs_entry(fileEntry);
+      if (isDir) {
+	// The path is a directory, so reopen the file browser at this directory
+	reopen = true;
+      } else {
+	// The path is a file
+	if (id >= ID_ENTER_DISK0) {
+	  id &= 3;
+	  closedisc(id);
+	  strcpy(discfns[id], selected);
+	  newdisc(id, discfns[id]);
+	  if (defaultwriteprot) {
+	    writeprot[id] = 1;
+	  }
+	  popup(POPUP_TIME, "Created disk %s", selected);
+	} else {
+	  if (!isExisting) {
+	    popup(POPUP_TIME, "File %s does not exist!!", selected);
+	  } else if (id == ID_TAPE) {
+	    closeuef();
+	    closecsw();
+	    strcpy(tapefn, selected);
+	    loadtape(tapefn);
+	    setejecttext(ID_TAPE, selected);
+	    popup(POPUP_TIME, "Loaded tape %s", selected);
+	  
+	  } else {
+	    closedisc(id);
+	    strcpy(discfns[id], selected);
+	    loaddisc(id, discfns[id]);
+	    if (defaultwriteprot) {
+	      writeprot[id] = 1;
+	    }
+	    popup(POPUP_TIME, "Loaded disk %s", selected);
+	  }
+	}
+      }
+    }
+    file_browser_close();
+    if (reopen) {
+      file_browser_open(browserTitle, selected, id);
+    }
+
+  } else if (ret == file_reset) {
     resetit = 1;
     popup(POPUP_TIME, "Reset 6502");
-  }
-  if (ret == file_exit) {
+
+  } else if (ret == file_exit) {
     popup(POPUP_TIME, "Exiting...");
     quited = 1;
-  }
-  if (ret == tape_load) {
-    gui_file_browser("Please choose a tape image", "tapes", ID_TAPE);
-  }
-  if (ret == tape_eject) {
+
+  } else if (ret == tape_load) {
+    file_browser_open("Please choose a tape image", "tapes", ID_TAPE);
+
+  } else if (ret == tape_eject) {
     closeuef();
     closecsw();
     setejecttext(ID_TAPE, "");
     popup(POPUP_TIME, "Ejected tape");
-  }
-  if (ret == tape_rewind) {
+
+  } else if (ret == tape_rewind) {
     closeuef();
     closecsw();
     loadtape(tapefn);
     popup(POPUP_TIME, "Rewound tape");
-  }
-  if (ret == tape_catalog) {
+
+  } else if (ret == tape_catalog) {
     popup(POPUP_TIME, "Not yet implemented!!!");
-  }
-  if (ret == tape_speed_normal) {
+
+  } else if (ret == tape_speed_normal) {
     fasttape = 0;
     popup(POPUP_TIME, "Normal tape speed");
-  }
-  if (ret == tape_speed_fast) {
+
+  } else if (ret == tape_speed_fast) {
     popup(POPUP_TIME, "Not yet implemented!!!");
     // fasttape = 1;
-  }
-  if (ret == disc_load0) {
-    gui_file_browser("Please choose a disc image", "disks", ID_DISK0);
-  }
-  if (ret == disc_load1) {
-    gui_file_browser("Please choose a disc image", "disks", ID_DISK1);
-  }
-  if (ret == disc_eject0) {
+
+  } else if (ret == disc_load0) {
+    file_browser_open("Please choose a disc image", "disks", ID_DISK0);
+
+  } else if (ret == disc_load1) {
+    file_browser_open("Please choose a disc image", "disks", ID_DISK1);
+
+  } else if (ret == disc_eject0) {
     closedisc(0);
     discfns[0][0] = 0;
     setejecttext(ID_DISK0, "");
     popup(POPUP_TIME, "Ejected disk :0/2");
   }
+
   if (ret == disc_eject1) {
     closedisc(1);
     discfns[1][0] = 0;
     setejecttext(ID_DISK1, "");
     popup(POPUP_TIME, "Ejected disk :1/3");
-  }
-  if (ret == disc_new0) {
-    gui_file_enterer("Please enter disk image name", "disks", ID_ENTER_DISK0);
-  }
-  if (ret == disc_new1) {
-    gui_file_enterer("Please enter disk image name", "disks", ID_ENTER_DISK1);
-  }
-  if (ret == disc_writeprot0) {
+
+  } else if (ret == disc_new0) {
+    file_browser_open("Please enter disk image name", "disks", ID_ENTER_DISK0);
+
+  } else if (ret == disc_new1) {
+    file_browser_open("Please enter disk image name", "disks", ID_ENTER_DISK1);
+
+  } else if (ret == disc_writeprot0) {
     writeprot[0] = disc_writeprot0->isChecked();
     if (fwriteprot[0]) {
       writeprot[0] = 1;
@@ -405,8 +515,8 @@ void optima_gui_update() {
     } else {
       popup(POPUP_TIME, "Disk :0/2 write enabled");
     }
-  }
-  if (ret == disc_writeprot1) {
+
+  } else if (ret == disc_writeprot1) {
     writeprot[1] = disc_writeprot1->isChecked();
     if (fwriteprot[1]) {
       writeprot[1] = 1;
@@ -416,22 +526,22 @@ void optima_gui_update() {
     } else {
       popup(POPUP_TIME, "Disk :1/3 write enabled");
     }
-  }
-  if (ret == disc_defaultwriteprot) {
+
+  } else if (ret == disc_defaultwriteprot) {
     defaultwriteprot = disc_defaultwriteprot->isChecked();
     if (defaultwriteprot) {
       popup(POPUP_TIME, "Default is write protected");
     } else {
       popup(POPUP_TIME, "Default is write enabled");
     }
-  }
-  if (ret == settings_video_snow) {
+
+  } else if (ret == settings_video_snow) {
     popup(POPUP_TIME, "Not yet implemented!!!");
-  }
-  if (ret == settings_video_fullscreen) {
+
+  } else if (ret == settings_video_fullscreen) {
     popup(POPUP_TIME, "Not yet implemented!!!");
-  }
-  if (ret == settings_hardware_colourboard) {
+
+  } else if (ret == settings_hardware_colourboard) {
     colourboard = settings_hardware_colourboard->isChecked();
     updatepal();
     if (colourboard) {
@@ -439,8 +549,8 @@ void optima_gui_update() {
     } else {
       popup(POPUP_TIME, "Monochrome palette");
     }
-  }
-  if (ret == settings_hardware_bbcmode) {
+
+  } else if (ret == settings_hardware_bbcmode) {
     bbcmode = settings_hardware_bbcmode->isChecked();
     if (bbcmode) {
       RR_enables |= RAMROM_FLAG_BBCMODE;
@@ -451,8 +561,8 @@ void optima_gui_update() {
     }
     set_rr_ptrs();
     resetit = 1;
-  }
-  if (ret == settings_ramrom_ramrom) {
+
+  } else if (ret == settings_ramrom_ramrom) {
     ramrom_enable = settings_ramrom_ramrom->isChecked();;
     resetit = 1;
     if (ramrom_enable) {
@@ -461,8 +571,7 @@ void optima_gui_update() {
       popup(POPUP_TIME, "RamRom board disabled");
     }
 
-  }
-  if (ret == settings_ramrom_diskrom) {
+  } else if (ret == settings_ramrom_diskrom) {
     if (settings_ramrom_diskrom->isChecked()) {
       RR_jumpers |= RAMROM_FLAG_DISKROM;
     } else {
@@ -474,16 +583,16 @@ void optima_gui_update() {
     } else {
       popup(POPUP_TIME, "Disk ROM disabled");
     }
-  }
-  if (ret == settings_sound_internalspeaker) {
+
+  } else if (ret == settings_sound_internalspeaker) {
     spon = settings_sound_internalspeaker->isChecked();
     if (spon) {
       popup(POPUP_TIME, "Speaker enabled");
     } else {
       popup(POPUP_TIME, "Speaker disabled");
     }
-  }
-  if (ret == settings_sound_atomsid) {
+
+  } else if (ret == settings_sound_atomsid) {
     sndatomsid = settings_sound_atomsid->isChecked();
     if (sndatomsid) {
       popup(POPUP_TIME, "SID enabled");
@@ -491,6 +600,7 @@ void optima_gui_update() {
       popup(POPUP_TIME, "SID disabled");
     }
   }
+
   if (ret == settings_sound_tapenoise) {
     tpon = settings_sound_tapenoise->isChecked();
     if (tpon) {
@@ -498,89 +608,51 @@ void optima_gui_update() {
     } else {
       popup(POPUP_TIME, "Tape noise disabled");
     }
-  }
-  if (ret == settings_sound_discnoise) {
+
+  } else if (ret == settings_sound_discnoise) {
     sndddnoise = settings_sound_discnoise->isChecked();
     if (sndddnoise) {
       popup(POPUP_TIME, "Disk noise enabled");
     } else {
       popup(POPUP_TIME, "Disk noise disabled");
     }
-  }
-  if (ret == settings_sound_ddtype_525) {
+
+  } else if (ret == settings_sound_ddtype_525) {
     ddtype = 0;
     closeddnoise();
     loaddiscsamps();
     popup(POPUP_TIME, "Disk noise type: 5.25\" drive");
-  }
-  if (ret == settings_sound_ddtype_35) {
+
+  } else if (ret == settings_sound_ddtype_35) {
     ddtype = 1;
     closeddnoise();
     loaddiscsamps();
     popup(POPUP_TIME, "Disk noise type: 3.5\" drive");
-  }
-  if (ret == settings_sound_ddvol_33) {
+
+  } else if (ret == settings_sound_ddvol_33) {
     ddvol = 1;
     popup(POPUP_TIME, "Disk noise volume: 33%%");
-  }
-  if (ret == settings_sound_ddvol_66) {
+
+  } else if (ret == settings_sound_ddvol_66) {
     ddvol = 2;
     popup(POPUP_TIME, "Disk noise volume: 66%%");
-  }
-  if (ret == settings_sound_ddvol_100) {
+
+  } else if (ret == settings_sound_ddvol_100) {
     ddvol = 3;
     popup(POPUP_TIME, "Disk noise volume: 100%%");
-  }
-  if (ret == settings_keyboard_redefine) {
+
+  } else if (ret == settings_keyboard_redefine) {
     popup(POPUP_TIME, "Not yet implemented!!!");
-  }
-  if (ret == settings_keyboard_default) {
+
+  } else if (ret == settings_keyboard_default) {
     int c;
     for (c = 0; c < 128; c++) {
       keylookup[c] = c;
     }
     popup(POPUP_TIME, "Reset key bindings to default");
-  }
-  if (ret == misc_screenshot) {
+
+  } else if (ret == misc_screenshot) {
     popup(POPUP_TIME, "Not yet implemented!!!");
-  }
-  if (ret == buttonOK || ret == buttonCancel) {
-    if (ret == buttonOK) {
-      if (id >= ID_ENTER_DISK0) {
-	const char *entered = textField->getText().c_str();
-	id &= 3;
-	closedisc(id);
-	strcpy(discfns[id], entered);
-	newdisc(id, discfns[id]);
-	if (defaultwriteprot) {
-	  writeprot[id] = 1;
-	}
-	popup(POPUP_TIME, "Created disk :%d/%d %s", id, id + 2, entered);
-      } else {
-	const char *selected = files[fileList->getSelected()].c_str();
-	if (id == ID_TAPE) {
-	  closeuef();
-	  closecsw();
-	  strcpy(tapefn, selected);
-	  loadtape(tapefn);
-	  setejecttext(ID_TAPE, selected);
-	  popup(POPUP_TIME, "Loaded tape %s", selected);
-	  
-	} else {
-	  closedisc(id);
-	  strcpy(discfns[id], selected);
-	  loaddisc(id, discfns[id]);
-	  if (defaultwriteprot) {
-	    writeprot[id] = 1;
-	  }
-	  popup(POPUP_TIME, "Loaded disk :%d/%d %s", id, id + 2, selected);
-	}
-      }
-    }
-    buttonOK->remove();
-    buttonCancel->remove();
-    fileEnterer->remove();
-    fileBrowser->remove();
   }
 
   if (resetit) {
@@ -595,47 +667,57 @@ void optima_gui_draw() {
   tgui::draw();
 }
 
-
-void gui_file_browser(char *title, char *dirpath, int mode)
+void file_browser_open(std::string title, std::string dirpath, int mode)
 {
-  id = mode;
 
-  ALLEGRO_FS_ENTRY *dir = al_create_fs_entry(dirpath);
-  ALLEGRO_FS_ENTRY *file;
-  al_open_directory(dir);
+  // Cleare text box
+  fileName->setText("");
+
+  // Update the mode
+  id = mode;
+  // Update the title
+  browserTitle = title;
+
+  ALLEGRO_FS_ENTRY *dirEntry = al_create_fs_entry(dirpath.c_str());
+
+  // Update the directory name widget
+  dirName->setText(al_get_fs_entry_name(dirEntry));
+
+  al_open_directory(dirEntry);
+
+  // Read the files from the dirpath directory into the files vector
   files.clear();
-  while ((file = al_read_directory(dir))) {
-    files.push_back(al_get_fs_entry_name(file));
-    al_destroy_fs_entry(file);
+  files.push_back("../");
+  ALLEGRO_FS_ENTRY *fileEntry;
+  while ((fileEntry = al_read_directory(dirEntry))) {
+    ALLEGRO_PATH *path = al_create_path(al_get_fs_entry_name(fileEntry));
+    // Allocate fileName on the heap so it doesn't go out of scope when this function feturns
+    std::string fileName = al_get_path_filename(path);
+    if (al_get_fs_entry_mode(fileEntry) & ALLEGRO_FILEMODE_ISDIR) {
+      fileName.append("/");
+    }
+    files.push_back(fileName);
+    al_destroy_path(path);
+    al_destroy_fs_entry(fileEntry);
   }
-  al_close_directory(dir);
-  al_destroy_fs_entry(dir);
+  al_close_directory(dirEntry);
+  al_destroy_fs_entry(dirEntry);
 
   std::sort(files.begin(), files.end());
+
   fileList->setLabels(files);
-  fileList->setSelected(0);
+  fileList->setSelected(-1);
   fileBrowser->setTitle(title);
 
   tgui::setNewWidgetParent(0);
   tgui::addWidget(fileBrowser);
-  tgui::addWidget(buttonOK);
-  tgui::addWidget(buttonCancel);
   return;
 }
 
-void gui_file_enterer(char *title, char *dirpath, int mode)
+void file_browser_close()
 {
-  id = mode;
-
-  textField->setText("");
-  fileEnterer->setTitle(title);
-
-  tgui::setNewWidgetParent(0);
-  tgui::addWidget(fileEnterer);
-  tgui::addWidget(buttonOK);
-  tgui::addWidget(buttonCancel);
-  tgui::setFocus(textField);
-  return;
+  tgui::setFocus(NULL);
+  fileBrowser->remove();
 }
 
 
