@@ -426,12 +426,7 @@ void optima_gui_update() {
     }
   }
   if (ret == settings_video_snow) {
-    snow = settings_video_snow->isChecked();
-    if (snow) {
-      popup(POPUP_TIME, "Snow enabled");
-    } else {
-      popup(POPUP_TIME, "Snow disabled");
-    }
+    popup(POPUP_TIME, "Not yet implemented!!!");
   }
   if (ret == settings_video_fullscreen) {
     popup(POPUP_TIME, "Not yet implemented!!!");
