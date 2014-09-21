@@ -10,6 +10,7 @@
 
 #define ID_ENTER_DISK0  4
 #define ID_ENTER_DISK1  5
+#define ID_SCREENSHOT   6
 
 
 extern "C" {
@@ -25,7 +26,7 @@ extern "C" {
   int fskipmax = 0;
 }
 
-void file_browser_open(std::string title, std::string dirpath, int mode);
+void file_browser_open(std::string title, std::string dirpath, int mode, std::string initial);
 
 void file_browser_close();
 
@@ -50,6 +51,16 @@ void setejecttext(int id, const char *fn)
 
 void setquit()
 {
+}
+
+std::string screenshot_filename() {
+  struct tm tm;
+  char tmp[120];
+  time_t t;
+  time(&t);
+  localtime_r(&t,&tm); 
+  sprintf(tmp, "optima_%02i%02i%02i_%02i%02i%02i.png", tm.tm_year, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+  return tmp;
 }
 
 // Widgets for the file browser
@@ -395,21 +406,34 @@ void optima_gui_update() {
       selectedstr = dirstr;
     }
     const char *selected = selectedstr.c_str();
-    printf("select = >%s<\n", selected);
+    // printf("select = >%s<\n", selected);
     if (ret == buttonOK) {
       // Form a path
       ALLEGRO_FS_ENTRY *fileEntry = al_create_fs_entry(selected);
-      printf("fileEntry = %s\n", al_get_fs_entry_name(fileEntry));
+      // printf("fileEntry = %s\n", al_get_fs_entry_name(fileEntry));
       bool isExisting = al_fs_entry_exists(fileEntry);
       bool isDir = al_get_fs_entry_mode(fileEntry) & ALLEGRO_FILEMODE_ISDIR;
-      printf("isDir = %d isExisting = %d\n", (int) isDir, (int) isExisting);
+      // printf("isDir = %d isExisting = %d\n", (int) isDir, (int) isExisting);
       al_destroy_fs_entry(fileEntry);
       if (isDir) {
 	// The path is a directory, so reopen the file browser at this directory
 	reopen = true;
       } else {
 	// The path is a file
-	if (id >= ID_ENTER_DISK0) {
+	if (id == ID_SCREENSHOT) {
+	  int scale = 3;
+	  int width = al_get_bitmap_width(atomscreen);
+	  int height = al_get_bitmap_height(atomscreen);
+	  ALLEGRO_BITMAP *scaled = al_create_bitmap(width * scale, height * scale);
+	  al_set_target_bitmap(scaled);
+	  al_draw_scaled_bitmap(atomscreen, 0, 0, width, height, 0, 0, scale * width, scale * height, 0);
+	  if (al_save_bitmap(selected, scaled)) {
+	    popup(POPUP_TIME, "Screenshot succeeded");
+	  } else {
+	    popup(POPUP_TIME, "Screenshot failed");
+	  }
+	  al_destroy_bitmap(scaled);
+	} else if (id >= ID_ENTER_DISK0) {
 	  id &= 3;
 	  closedisc(id);
 	  strcpy(discfns[id], selected);
@@ -443,7 +467,7 @@ void optima_gui_update() {
     }
     file_browser_close();
     if (reopen) {
-      file_browser_open(browserTitle, selected, id);
+      file_browser_open(browserTitle, selected, id, "");
     }
 
   } else if (ret == file_reset) {
@@ -455,7 +479,7 @@ void optima_gui_update() {
     quited = 1;
 
   } else if (ret == tape_load) {
-    file_browser_open("Please choose a tape image", "tapes", ID_TAPE);
+    file_browser_open("Please choose a tape image", "tapes", ID_TAPE, "");
 
   } else if (ret == tape_eject) {
     closeuef();
@@ -481,10 +505,10 @@ void optima_gui_update() {
     // fasttape = 1;
 
   } else if (ret == disc_load0) {
-    file_browser_open("Please choose a disc image", "disks", ID_DISK0);
+    file_browser_open("Please choose a disc image", "disks", ID_DISK0, "");
 
   } else if (ret == disc_load1) {
-    file_browser_open("Please choose a disc image", "disks", ID_DISK1);
+    file_browser_open("Please choose a disc image", "disks", ID_DISK1, "");
 
   } else if (ret == disc_eject0) {
     closedisc(0);
@@ -500,10 +524,10 @@ void optima_gui_update() {
     popup(POPUP_TIME, "Ejected disk :1/3");
 
   } else if (ret == disc_new0) {
-    file_browser_open("Please enter disk image name", "disks", ID_ENTER_DISK0);
+    file_browser_open("Please enter disk image name", "disks", ID_ENTER_DISK0, "");
 
   } else if (ret == disc_new1) {
-    file_browser_open("Please enter disk image name", "disks", ID_ENTER_DISK1);
+    file_browser_open("Please enter disk image name", "disks", ID_ENTER_DISK1, "");
 
   } else if (ret == disc_writeprot0) {
     writeprot[0] = disc_writeprot0->isChecked();
@@ -652,7 +676,8 @@ void optima_gui_update() {
     popup(POPUP_TIME, "Reset key bindings to default");
 
   } else if (ret == misc_screenshot) {
-    popup(POPUP_TIME, "Not yet implemented!!!");
+    std::string initial = screenshot_filename();
+    file_browser_open("Please enter screenshot name name", "screenshots", ID_SCREENSHOT, initial);
   }
 
   if (resetit) {
@@ -663,15 +688,17 @@ void optima_gui_update() {
 
 }
 
+	  
+
 void optima_gui_draw() {
   tgui::draw();
 }
 
-void file_browser_open(std::string title, std::string dirpath, int mode)
+void file_browser_open(std::string title, std::string dirpath, int mode, std::string initial)
 {
 
   // Cleare text box
-  fileName->setText("");
+  fileName->setText(initial);
 
   // Update the mode
   id = mode;

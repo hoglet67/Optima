@@ -1195,27 +1195,28 @@ void update_atom_display(int linenum, int skip)
 {
   int lines;
   int i;
-  for (lines = 0; lines < linenum; lines+=2)
-    {
-      // If we are falling behind, skip the display updating
-      if (!skip && (lines < 262 || lines == 310)) {
-	drawline(lines);
-	drawline(lines+1);
-      }
-      // Halt the emulation if the menu is visible
-      if (show_menu) {
-	continue;
-      }
-      // Execute's 128 cycles worth of instructions
-      exec6502();
-      // Generate 128 cycles with of sound (4 samples at 31250Hz)
-      pollsound();
-
-      tapecyc -= 512;
-      if (tapecyc < 0) {
-	polltape();
-      }
-      // Update the via, etc
-      do_poll(the_cpu, 128);
+  lockAtomScreen();
+  for (lines = 0; lines < linenum; lines+=2) {
+    // If we are falling behind, skip the display updating
+    if (!skip && (lines < 262 || lines == 310)) {
+      drawline(lines);
+      drawline(lines+1);
     }
+    // Halt the emulation if the menu is visible
+    if (show_menu) {
+      continue;
+    }
+    // Execute's 128 cycles worth of instructions
+    exec6502();
+    // Generate 128 cycles with of sound (4 samples at 31250Hz)
+    pollsound();
+    
+    tapecyc -= 512;
+    if (tapecyc < 0) {
+      polltape();
+    }
+    // Update the via, etc
+    do_poll(the_cpu, 128);
+  }
+  unlockAtomScreen();
 }

@@ -2,7 +2,7 @@ VPATH = . resid-fp atommc
 CPP  = g++-4.7
 CC   = gcc-4.7
 DEBUG =
-OPT = -O3
+OPT   = -O3
 
 #WINDRES = windres.exe
 CFLAGS = $(DEBUG) $(OPT) -mfpu=vfp -mfloat-abi=hard -ffast-math -fomit-frame-pointer -falign-loops -falign-jumps -falign-functions -I/usr/local/include -I/usr/local/include/allegro5
@@ -15,7 +15,7 @@ MMCOBJ = atommc.o atmmc2core.o atmmc2wfn.o ff_emu.o ff_emudir.o wildcard.o
 
 # linux-keydefine.o
 
-LIBS =  -L/usr/local/lib -lallegro-static -lz -lopenal -lstdc++ -lm -L /opt/vc/lib -lGLESv2 -lX11  /usr/lib/libalut.a -lallegro_audio-static -lasound -lallegro_acodec-static  -lallegro_font-static  -lallegro_ttf-static -lfreetype -lallegro_color-static -l allegro_primitives-static
+LIBS =  -L/usr/local/lib -lallegro-static -lz -lopenal -lstdc++ -lm -L /opt/vc/lib -lGLESv2 -lX11  /usr/lib/libalut.a -lallegro_audio-static -lasound -lallegro_acodec-static  -lallegro_font-static  -lallegro_ttf-static -lfreetype -lallegro_color-static -l allegro_primitives-static -l allegro_image-static -ljpeg -lpng
 
 Atomulator: $(OBJ) $(SIDOBJ) $(MMCOBJ)
 	$(CC) $(DEBUG) $(OBJ) $(SIDOBJ) $(MMCOBJ) -o "Atomulator" $(LIBS) 

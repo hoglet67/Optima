@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <allegro.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,6 +37,11 @@ extern int RR_enables;
 extern int quited;
 extern int displayW;
 extern int displayH;
+
+extern ALLEGRO_BITMAP *atomscreen;
+
+void lockAtomScreen();
+void unlockAtomScreen();
 
 #define ID_DISK0 0
 #define ID_DISK1 1

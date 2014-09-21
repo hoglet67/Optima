@@ -89,7 +89,7 @@ uint8_t fontdata[] =
 };
 
 ALLEGRO_DISPLAY *display;
-ALLEGRO_BITMAP *b;
+ALLEGRO_BITMAP *atomscreen;
 ALLEGRO_BITMAP *cursor;
 ALLEGRO_LOCKED_REGION *lr;
 
@@ -155,9 +155,7 @@ void initvideo()
     }
   }
 
-  b = al_create_bitmap(screenW, screenH);
-  al_set_target_bitmap(b);
-  lr = al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
+  atomscreen = al_create_bitmap(screenW, screenH);
 
   updatepal();
 
@@ -283,6 +281,15 @@ char scrshotname[260];
 int savescrshot = 0;
 
 uint8_t fetcheddat[32];
+
+void lockAtomScreen() {
+  al_set_target_bitmap(atomscreen);
+  lr = al_lock_bitmap(atomscreen, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
+}
+
+void unlockAtomScreen() {
+  al_unlock_bitmap(atomscreen);
+}
 
 void drawline(int line)
 {
@@ -567,10 +574,11 @@ void drawline(int line)
 			  border = textcols[colourboard][0];
 			}
 
-			al_unlock_bitmap(b);
+			unlockAtomScreen();
+
 			al_set_target_bitmap(al_get_backbuffer(display));
 			al_clear_to_color(al_map_rgb((border >> 16) & 255, (border >> 8) & 255, border & 255));
-			al_draw_scaled_bitmap(b, 0, 0, screenW, screenH, scaleX, scaleY, scaleW, scaleH, 0);
+			al_draw_scaled_bitmap(atomscreen, 0, 0, screenW, screenH, scaleX, scaleY, scaleW, scaleH, 0);
 
 			// If a popup is active, then render it
 			if (popup_time) {
@@ -588,9 +596,8 @@ void drawline(int line)
 			}
 
 			al_flip_display();
-			al_lock_bitmap(b, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_WRITEONLY);
-			al_set_target_bitmap(b);
 
+			lockAtomScreen();
 
 			frmcount = 0;
 		}

@@ -67,6 +67,11 @@ int main(int argc, char **argv)
     return -1;
   }
 
+  if (!al_init_image_addon()) {
+    fprintf(stderr, "failed to initialize allegro image addon!\n");
+    return -1;
+  }
+
   ALLEGRO_PATH *path = al_create_path(argv[0]);
   al_set_path_filename(path, NULL);
   strcpy(exedir, al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP));
