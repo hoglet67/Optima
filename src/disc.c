@@ -17,10 +17,12 @@ struct
 }
 loaders[] =
 {
-	{ "DSK", ssd_load, ssd_close, 40 * 10 * 256	},
-	{ "SSD", ssd_load, ssd_close, 80 * 10 * 256	},
-	{ "DSD", dsd_load, ssd_close, 2 * 80 * 10 * 256 },
-	{ "FDI", fdi_load, fdi_close, -1		},
+	{ ".40T", ssd_load, ssd_close, 40 * 10 * 256	},
+	{ ".DSK", ssd_load, ssd_close, 40 * 10 * 256	},
+	{ ".80T", ssd_load, ssd_close, 80 * 10 * 256	},
+	{ ".SSD", ssd_load, ssd_close, 80 * 10 * 256	},
+	{ ".DSD", dsd_load, ssd_close, 2 * 80 * 10 * 256 },
+	{ ".FDI", fdi_load, fdi_close, -1		},
 	{ 0,	 0,	   0 }
 };
 
@@ -101,6 +103,7 @@ void newdisc(int drive, char *fn)
 		}
 		c++;
 	}
+	popup(POPUP_TIME, "%s is not a supported format", p);
 }
 
 void closedisc(int drive)
@@ -189,7 +192,7 @@ void loadtape(char *fn)
 	if (!p)
 		return;
 //        rpclog("do load %c\n",p[0]);
-	if (p[0] == 'u' || p[0] == 'U')
+	if (p[1] == 'u' || p[1] == 'U')
 		openuef(fn);
 	else
 		opencsw(fn);
