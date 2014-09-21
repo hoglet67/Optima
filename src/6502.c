@@ -1195,7 +1195,6 @@ void update_atom_display(int linenum, int skip)
 {
   int lines;
   int i;
-  lockAtomScreen();
   for (lines = 0; lines < linenum; lines+=2) {
     // If we are falling behind, skip the display updating
     if (!skip && (lines < 262 || lines == 310)) {
@@ -1218,5 +1217,4 @@ void update_atom_display(int linenum, int skip)
     // Update the via, etc
     do_poll(the_cpu, 128);
   }
-  unlockAtomScreen();
 }

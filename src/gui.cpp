@@ -426,7 +426,9 @@ void optima_gui_update() {
 	  int height = al_get_bitmap_height(atomscreen);
 	  ALLEGRO_BITMAP *scaled = al_create_bitmap(width * scale, height * scale);
 	  al_set_target_bitmap(scaled);
+	  unlockAtomScreen();
 	  al_draw_scaled_bitmap(atomscreen, 0, 0, width, height, 0, 0, scale * width, scale * height, 0);
+	  lockAtomScreen();
 	  if (al_save_bitmap(selected, scaled)) {
 	    popup(POPUP_TIME, "Screenshot succeeded");
 	  } else {

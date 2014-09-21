@@ -157,6 +157,8 @@ void initvideo()
 
   atomscreen = al_create_bitmap(screenW, screenH);
 
+  lockAtomScreen();
+
   updatepal();
 
   // Set the popup font to approx 40 columns

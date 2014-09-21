@@ -248,8 +248,7 @@ void atom_run()
     ALLEGRO_KEYBOARD_STATE key_state;
     int newf12;
         
-    double t1 = al_get_time();
-
+    // double t1 = al_get_time();
     // Alse executes a frame's worth of 6502 code...
     // Decided *not* to emulate 50Hz updates
     update_atom_display(262, skip);
