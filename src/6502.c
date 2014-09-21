@@ -1202,6 +1202,10 @@ void update_atom_display(int linenum, int skip)
 	drawline(lines);
 	drawline(lines+1);
       }
+      // Halt the emulation if the menu is visible
+      if (show_menu) {
+	continue;
+      }
       // Execute's 128 cycles worth of instructions
       exec6502();
       // Generate 128 cycles with of sound (4 samples at 31250Hz)
