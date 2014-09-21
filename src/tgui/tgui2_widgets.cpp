@@ -1510,6 +1510,9 @@ void TGUI_ScrollPane::draw(int abs_x, int abs_y)
 {
 	setDefaultColors();
 
+	// background
+	al_draw_filled_rectangle(abs_x, abs_y, abs_x+width-SCROLLBAR_THICKNESS, abs_y+height-SCROLLBAR_THICKNESS, back);
+
 	int offsx = (child->getWidth()-(width-SCROLLBAR_THICKNESS)) * ox;
 	int offsy = (child->getHeight()-(height-SCROLLBAR_THICKNESS)) * oy;
 
@@ -1899,8 +1902,6 @@ void TGUI_TextField::draw(int abs_x, int abs_y)
 {
 	setDefaultColors();
 
-	this->height = al_get_font_line_height(tgui::getFont()) + PADDING*2;
-
 	ALLEGRO_COLOR bgcolor = al_color_name("white");
 
 	al_draw_filled_rectangle(abs_x, abs_y, abs_x+width, abs_y+height, bgcolor);
@@ -2029,6 +2030,7 @@ TGUI_TextField::TGUI_TextField(std::string startStr, int x, int y, int width) :
 	this->x = x;
 	this->y = y;
 	this->width = width;
+	this->height = al_get_font_line_height(tgui::getFont()) + PADDING*2;
 
 	findOffset();
 }
@@ -2051,6 +2053,10 @@ bool TGUI_Frame::getAbsoluteChildPosition(tgui::TGUIWidget *widget, int *x, int 
 		*y = this->y + widget->getY();
 		return true;
 	}
+	if (child->getAbsoluteChildPosition(widget, x, y)) {
+		return true;
+	}
+
 	return false;
 }
 
@@ -2161,10 +2167,21 @@ TGUI_List::TGUI_List(int x, int y, int width)
 	this->width = width;
 	height = 0;
 	selected = 0;
+	clicked = false;
 }
 
 TGUI_List::~TGUI_List()
 {
+}
+
+tgui::TGUIWidget *TGUI_List::update()
+{
+	if (clicked) {
+		clicked = false;
+		return this;
+	}
+
+	return NULL;
 }
 
 void TGUI_List::mouseDown(int rel_x, int rel_y, int abs_x, int abs_y, int mb)
@@ -2176,6 +2193,7 @@ void TGUI_List::mouseDown(int rel_x, int rel_y, int abs_x, int abs_y, int mb)
 			return;
 		}
 		selected = sel;
+		clicked = true;
 	}
 }
 

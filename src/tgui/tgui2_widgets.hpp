@@ -444,6 +444,7 @@ protected:
 class TGUI_List : public TGUI_Extended_Widget
 {
 public:
+	tgui::TGUIWidget *update();
 	void draw(int abs_x, int abs_y);
 
 	const std::vector<std::string> &getLabels();
@@ -460,6 +461,7 @@ protected:
 
 	std::vector<std::string> labels;
 	int selected;
+	bool clicked;
 };
 
 void tguiWidgetsSetColors(ALLEGRO_COLOR fore, ALLEGRO_COLOR back);
