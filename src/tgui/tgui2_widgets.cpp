@@ -1034,17 +1034,17 @@ void TGUI_TextMenuItem::draw(int abs_x, int abs_y)
 	int menuPad = tgui::getMenuPad();
 
 	al_clear_to_color(back);
-	al_draw_text(tgui::getFont(), fore, abs_x+HEIGHT, abs_y + menuPad, 0,
+	al_draw_text(tgui::getFont(), fore, abs_x+height, abs_y + menuPad, 0,
 		name.c_str());
 	if (shortcut_keycode) {
 		const char *str = al_keycode_to_name(shortcut_keycode);
 		if (strlen(str) == 1) {
-			al_draw_textf(tgui::getFont(), fore, abs_x+width-HEIGHT, abs_y + menuPad, ALLEGRO_ALIGN_RIGHT, "%s",
+			al_draw_textf(tgui::getFont(), fore, abs_x+width-height, abs_y + menuPad, ALLEGRO_ALIGN_RIGHT, "%s",
 				al_keycode_to_name(shortcut_keycode));
-			al_draw_textf(tgui::getFont(), fore, abs_x+width-HEIGHT-al_get_font_line_height(tgui::getFont()), abs_y + menuPad, ALLEGRO_ALIGN_RIGHT, "Ctrl-");
+			al_draw_textf(tgui::getFont(), fore, abs_x+width-height-al_get_font_line_height(tgui::getFont()), abs_y + menuPad, ALLEGRO_ALIGN_RIGHT, "Ctrl-");
 		}
 		else {
-			al_draw_textf(tgui::getFont(), fore, abs_x+width-HEIGHT, abs_y, ALLEGRO_ALIGN_RIGHT, "Ctrl-%s",
+			al_draw_textf(tgui::getFont(), fore, abs_x+width-height, abs_y, ALLEGRO_ALIGN_RIGHT, "Ctrl-%s",
 				al_keycode_to_name(shortcut_keycode));
 		}
 	}

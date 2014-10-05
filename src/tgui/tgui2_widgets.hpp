@@ -182,7 +182,6 @@ class TGUI_MenuBar;
 class TGUI_TextMenuItem : public TGUI_Extended_Widget
 {
 public:
-	static const int HEIGHT = 32;
 
 	virtual void close() {};
 	void setMenuBar(TGUI_MenuBar *menuBar);
@@ -270,7 +269,6 @@ class TGUI_MenuBar : public TGUI_Extended_Widget
 {
 public:
 	static const int PADDING = 10;
-	static const int HEIGHT = 32;
 	
 	void close();
 
