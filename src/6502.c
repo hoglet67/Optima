@@ -417,12 +417,7 @@ void do_poll(M6502* cpu, int c) {
 	// Time to poll hardware?
 	if (c > 0) {
 
-		via.t1c -= c;
-		if (!(via.acr&0x20))  via.t2c-=c;
-		if (via.t1c<-3  || via.t2c<-3)  updatetimers();
-
 		otherstuffcount-=c;
-
 
 		if (motoron) {
 			if (fdctime) {

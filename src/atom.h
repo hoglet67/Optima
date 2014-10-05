@@ -58,18 +58,6 @@ extern int sndtape;
 
 int interrupt;
 
-typedef struct VIA
-{
-	uint8_t ora, orb, ira, irb;
-	uint8_t ddra, ddrb;
-	uint32_t t1l, t2l;
-	int t1c, t2c;
-	uint8_t acr, pcr, ifr, ier;
-	int t1hit, t2hit;
-	uint8_t porta, portb;
-} VIA;
-
-VIA via;
 
 int fetchc[65536], readc[65536], writec[65536];
 uint16_t pc;

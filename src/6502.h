@@ -18,6 +18,28 @@
 #define FLAG_V 0x40
 #define FLAG_N 0x80
 
+typedef struct VIA
+{
+  int t1c;	// accessed by 6502asm +0
+  int t2c;	// accessed by 6502asm +4
+  uint8_t acr;	// accessed by 6502asm +8
+  uint8_t pcr;
+  uint8_t ifr;
+  uint8_t ier;
+  uint8_t ora;
+  uint8_t orb;
+  uint8_t ira;
+  uint8_t irb;
+  uint8_t ddra;
+  uint8_t ddrb;
+  uint8_t porta;
+  uint8_t portb;
+  uint32_t t1l;
+  uint32_t t2l;
+  int t1hit;
+  int t2hit;
+} VIA;
+
 typedef struct {
   int writeMask0;
   int writeMask1;
@@ -41,9 +63,12 @@ typedef struct {
   uint16_t pc_tapeoff; //+52  
   uint16_t tapeon; //+54
   uint32_t cyclesTotal;	// +56
+  uint32_t spare;	// +60
+  VIA via; // +64
 } M6502;
 
 extern M6502* the_cpu;
+extern VIA *via;
 
 extern uint8_t *roms;
 extern int swram[16];

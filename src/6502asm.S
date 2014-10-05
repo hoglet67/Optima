@@ -27,7 +27,11 @@ CPU_PC_TAPEON=50
 CPU_PC_TAPEOFF=52
 CPU_TAPEON=54
 CPU_CYCLES_TOTAL=56	
-	
+CPU_SPARE=60
+VIA_T1C=64
+VIA_T2C=68
+VIA_ACR=72
+
 @ This implementation keeps 6502 state entirely in ARM registers during exec6502(), in order to reduce memory accesses.
 @ We haven't yet exploited the performance gains because we are still calling do_poll() after every
 @ instruction (i.e. pushing 6502 state on the stack with every emulated instruction). A goal for future development
@@ -214,26 +218,46 @@ no_interrupt:
 	ldr  %r0,[%r4, #CPU_CYCLES_TOTAL]
 	add  %r0, %r1
 	str  %r0,[%r4, #CPU_CYCLES_TOTAL]
-
 	
 	ldr  %r0,[%r4, #CPU_CYCLES]
-	subs  %r0, %r1
+	subs %r0, %r1
 	str  %r0,[%r4, #CPU_CYCLES]
-	//bcs do_poll_now
 
-	@ Update intermediate cycle counter
-/*	ldr  %r0,[%r4, #XXX_38]
-	add  %r0, %r1
-	str  %r0,[%r4, #XXX_38]
-	cmp %r0, #32
-	blt no_poll_yet
-	sub %r0, #32
-	str  %r0,[%r4, #XXX_38]
-do_poll_now:*/
+	@ TODO: Update Tape Counter
+	@ tapecyc -= (c << 2); if (tapecyc < 0) polltape();
+		
+	@ Update Via Timers
+    @ via.t1c -= c;
+	@ if (!(via.acr & 0x20))
+	@    via.t2c -= c;
+	@ if (via.t1c < -1 || via.t2c < -1)
+	@	updatetimers();
+		
+	ldr  %r0,[%r4, #VIA_T1C]
+	subs %r0, %r1
+	str  %r0,[%r4, #VIA_T1C]
+
+	ldrb %r0,[%r4, #VIA_ACR]
+	tst  %r0, #0x20
+	bne  check_counter_hits
+
+	ldr  %r0,[%r4, #VIA_T2C]
+	subs %r0, %r1
+	str  %r0,[%r4, #VIA_T2C]
+
+check_counter_hits:
+
+	ldr  %r0,[%r4, #VIA_T1C]
+	cmp  %r0, #-1
+	blt  do_update_timers
+	ldr  %r0,[%r4, #VIA_T1C]
+	cmp  %r0, #-1
+	blt  do_update_timers
+	
+
+continue_executing:
+		
 	mov %r0, %r4
-// 	bl do_poll
-no_poll_yet:
-
 	@ Loop back until cpu->cycles <=0
 	ldr  %r0,[%r4, #CPU_CYCLES]
 	cmp  %r0, #0
@@ -250,7 +274,13 @@ no_poll_yet:
 	pop {%r4-%r12,lr}
     bx   lr
 
+do_update_timers:
 
+	push {lr}
+	bl updatetimers
+	pop {lr}
+	b  continue_executing
+		
  .ltorg
 
 
