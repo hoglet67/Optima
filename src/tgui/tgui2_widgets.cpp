@@ -1384,15 +1384,20 @@ void TGUI_MenuBar::draw(int abs_x, int abs_y)
 {
 	setDefaultColors();
 
+	ALLEGRO_COLOR fore = al_color_name("black");
+	ALLEGRO_COLOR back = ::fore;
+
+	al_draw_filled_rectangle(abs_x, abs_y, abs_x+width, abs_y+height, back);
+
 	// Preventing the whole screen being cleared
 	// al_clear_to_color(back);
 
+	int menuPad = tgui::getMenuPad();
 	int xx = abs_x+PADDING;
 	
 	for (unsigned int i = 0; i < menu_names.size(); i++) {
 		std::string name = menu_names[i];
-		al_draw_text(tgui::getFont(), al_color_name("white"), xx, abs_y, 0,
-			name.c_str());
+		al_draw_text(tgui::getFont(), fore, xx, abs_y + menuPad, 0, name.c_str());
 		int len = al_get_text_width(tgui::getFont(), name.c_str());
 		xx += len + PADDING;
 	}

@@ -160,7 +160,7 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontS
 
   fontSize = menuFontSize;
 
-  int menuWidth = displayW / 5;
+  int menuWidth = displayW / 4;
   int splitterPad = 0;
   int menuPad = menuFontSize / 3;
 

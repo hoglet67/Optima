@@ -164,8 +164,8 @@ void initvideo()
   // Set the popup font to approx 40 columns
   int popupFontSize = displayW / 40; 
 
-  // Set the menu font to approx 80 columns
-  int menuFontSize = displayW / 80; 
+  // Set the menu font to approx 60 columns
+  int menuFontSize = displayW / 60; 
 
   font = al_load_font("fonts/DejaVuSans.ttf", popupFontSize, 0);
 
