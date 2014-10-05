@@ -27,7 +27,7 @@
 #ifndef _FASTSID_H
 #define _FASTSID_H
 
-#define FIXPOINT_ARITHMETIC
+// #define FIXPOINT_ARITHMETIC
 
 /* use wavetables (sampled waveforms) */
 // slower on embedded device, due to cache thrashing to load memory
