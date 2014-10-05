@@ -89,7 +89,7 @@ void updatetimers()
 
 void writevia(uint16_t addr, uint8_t val)
 {
-        rpclog("VIA write %04X %02X %04X\n",addr,val,pc);
+  // rpclog("VIA write %04X %02X %04X\n",addr,val,pc);
 	switch (addr & 0xF)
 	{
 	case ORA:
