@@ -144,6 +144,7 @@ extern int curdrive;
 
 extern int sndddnoise;
 extern int sndatomsid;
+extern int sndsidfilter;
 extern int cursid;
 extern int sidmethod;
 extern unsigned char joyst;

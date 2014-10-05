@@ -4,6 +4,8 @@
 #include <strings.h>
 #include "fastsid.h"
 
+int sndsidfilter=1;
+
 int sidrunning=0;
 
 int sample_in_ptr;
@@ -24,7 +26,7 @@ void sid_init() {
   printf("sid_init() called\n");
   bzero(&_fastSID, sizeof(sound_t));
   _fastSID.sample_buf = sample_buf;
-  fastsid_init(&_fastSID, SAMPLE_FREQ, SID_FREQ);
+  fastsid_init(&_fastSID, SAMPLE_FREQ, SID_FREQ, sndsidfilter);
   sid_reset();
 }
 

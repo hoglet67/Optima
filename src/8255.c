@@ -328,16 +328,10 @@ void pollsound()
     tapbuffer[cycle_count + 3] = temp;
   }
 
-  // The SID code was setup to generate one sample per line
-  // Generate twp SID samples for the two lines
-  // Then double them to upsample to 31250Hz
+  // Two lines worth of samples (at 31250Hz) works out at 4
+  // If we struggle for performance, we would run the SID code at 15625Hz, and replicate samples
   if (sndatomsid) {
-    sid_fillbuf(&temp,2);
-    sidbuffer[cycle_count] = temp;
-    sidbuffer[cycle_count + 1] = temp;
-    sid_fillbuf(&temp,2);
-    sidbuffer[cycle_count + 2] = temp;
-    sidbuffer[cycle_count + 3] = temp;
+    sid_fillbuf(sidbuffer + cycle_count, 4);
   }
 
   // Remember for next time

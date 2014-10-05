@@ -679,7 +679,7 @@ static sound_t *fastsid_open(BYTE *sidstate)
     return psid;
 }
 
-int fastsid_init(sound_t *psid, int speed, int cycles_per_sec)
+int fastsid_init(sound_t *psid, int speed, int cycles_per_sec, int emulate_filter)
 {
     DWORD i;
     int sid_model = 0;
@@ -694,7 +694,7 @@ int fastsid_init(sound_t *psid, int speed, int cycles_per_sec)
     //if (resources_get_int("SidFilters", &(psid->emulatefilter)) < 0)
     //    return 0;
 	
-    psid->emulatefilter = EMULATE_FILTER;
+    psid->emulatefilter = emulate_filter;
 
     init_filter(psid, speed);
     setup_sid(psid);

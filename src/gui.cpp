@@ -6,6 +6,7 @@
 #include <allegro_color.h>
 
 #include "atom.h"
+#include "sid_atom.h"
 #include "roms.h"
 
 #define ID_ENTER_DISK0  4
@@ -106,6 +107,7 @@ TGUI_CheckMenuItem *settings_ramrom_diskrom;
 
 TGUI_CheckMenuItem *settings_sound_internalspeaker;
 TGUI_CheckMenuItem *settings_sound_atomsid;
+TGUI_CheckMenuItem *settings_sound_sidfilter;
 TGUI_CheckMenuItem *settings_sound_tapenoise;
 TGUI_CheckMenuItem *settings_sound_discnoise;
 
@@ -235,6 +237,7 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontS
   // Create the settings/sound menu
   settingsSoundItems.push_back(settings_sound_internalspeaker = new TGUI_CheckMenuItem("Internal speaker", 0, 0));
   settingsSoundItems.push_back(settings_sound_atomsid = new TGUI_CheckMenuItem("AtomSID", 0, 0));
+  settingsSoundItems.push_back(settings_sound_sidfilter = new TGUI_CheckMenuItem("SID Filter", 0, 0));
   settingsSoundItems.push_back(settings_sound_tapenoise = new TGUI_CheckMenuItem("Tape noise", 0, 0));
   settingsSoundItems.push_back(settings_sound_discnoise = new TGUI_CheckMenuItem("Disc drive noise", 0, 0));
   settingsSoundItems.push_back(new TGUI_SubMenuItem("Disc drive type", settingsSoundDDTypeMenu));
@@ -367,6 +370,7 @@ void optima_gui_refresh() {
   settings_ramrom_diskrom->setChecked((RR_jumpers & RAMROM_FLAG_DISKROM));
   settings_sound_internalspeaker->setChecked(spon);
   settings_sound_atomsid->setChecked(sndatomsid);
+  settings_sound_sidfilter->setChecked(sndsidfilter);
   settings_sound_tapenoise->setChecked(tpon);
   settings_sound_discnoise->setChecked(sndddnoise);
 }
@@ -625,9 +629,17 @@ void optima_gui_update() {
     } else {
       popup(POPUP_TIME, "SID disabled");
     }
-  }
 
-  if (ret == settings_sound_tapenoise) {
+  } else if (ret == settings_sound_sidfilter) {
+    sndsidfilter = settings_sound_sidfilter->isChecked();
+    if (sndsidfilter) {
+      popup(POPUP_TIME, "SID filter enabled");
+    } else {
+      popup(POPUP_TIME, "SID filter disabled");
+    }
+    sid_init();
+
+  } else if (ret == settings_sound_tapenoise) {
     tpon = settings_sound_tapenoise->isChecked();
     if (tpon) {
       popup(POPUP_TIME, "Tape noise enabled");
