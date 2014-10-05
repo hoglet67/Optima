@@ -630,7 +630,7 @@ static void init_filter(sound_t *psid, int freq)
     for (uk = 0, rk = 0; rk < 0x800; rk++, uk++) {
         float h;
 
-        h = (float)((((exp(rk / 2048 * log(filterFs)) / filterFm) + filterFt)
+        h = (float)((((exp(rk / 2048.0 * log(filterFs)) / filterFm) + filterFt)
             * filterRefFreq) / freq);
         if (h < yMin)
             h = yMin;

@@ -27,8 +27,7 @@
 #ifndef _FASTSID_H
 #define _FASTSID_H
 
-#include "types.h"
-#include "fixpoint.h"
+#define FIXPOINT_ARITHMETIC
 
 /* use wavetables (sampled waveforms) */
 // slower on embedded device, due to cache thrashing to load memory
@@ -45,6 +44,9 @@
 
 // Enable emulation of the SID Filter (more CPU intensive)
 #define EMULATE_FILTER 1
+
+#include "types.h"
+#include "fixpoint.h"
 
 /* needed data for one voice */
 typedef struct voice_s
