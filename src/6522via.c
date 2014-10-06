@@ -5,8 +5,9 @@
 #include "atom.h"
 #include "6502.h"
 
-extern M6502* the_cpu;
-VIA *via;
+extern M6502 *the_cpu;
+VIA          *via;
+int          log6522 = 0;
 
 #define TIMER1INT 	0x40
 #define TIMER2INT 	0x20
@@ -90,7 +91,9 @@ void updatetimers()
 
 void writevia(uint16_t addr, uint8_t val)
 {
-  // rpclog("VIA write %04X %02X %04X\n",addr,val,pc);
+  if (log6522) {
+    rpclog("VIA write %04X %02X %04X\n",addr,val,pc);
+  }
 	switch (addr & 0xF)
 	{
 	case ORA:

@@ -37,6 +37,8 @@ extern int RR_enables;
 extern int quited;
 extern int displayW;
 extern int displayH;
+extern int continueexec;
+extern int log6522;
 
 extern ALLEGRO_BITMAP *atomscreen;
 

@@ -122,6 +122,9 @@ TGUI_TextMenuItem *settings_keyboard_redefine;
 TGUI_TextMenuItem *settings_keyboard_default;
 
 TGUI_TextMenuItem *misc_screenshot;
+TGUI_CheckMenuItem *misc_continue_exec;
+TGUI_CheckMenuItem *misc_log_6522;
+
 
 TGUI_MenuBar *menuBar;
 
@@ -262,6 +265,8 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontS
 
   // Create the misc menu
   miscItems.push_back(misc_screenshot = new TGUI_TextMenuItem("Save screenshot", 0));
+  miscItems.push_back(misc_continue_exec = new TGUI_CheckMenuItem("Continue execution", 0, 0));
+  miscItems.push_back(misc_log_6522 = new TGUI_CheckMenuItem("Log 6522 writes", 0, 0));
   TGUI_Splitter *miscMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * miscItems.size(), TGUI_VERTICAL, false, miscItems);
   miscMenu->setPadding(splitterPad, splitterPad);
 
@@ -373,6 +378,8 @@ void optima_gui_refresh() {
   settings_sound_sidfilter->setChecked(sndsidfilter);
   settings_sound_tapenoise->setChecked(tpon);
   settings_sound_discnoise->setChecked(sndddnoise);
+  misc_continue_exec->setChecked(continueexec);
+  misc_log_6522->setChecked(log6522);
 }
 
 void optima_gui_handleEvent(ALLEGRO_EVENT *event) {
@@ -692,6 +699,23 @@ void optima_gui_update() {
   } else if (ret == misc_screenshot) {
     std::string initial = screenshot_filename();
     file_browser_open("Please enter screenshot name name", "screenshots", ID_SCREENSHOT, initial);
+
+  } else if (ret == misc_continue_exec) {
+    continueexec = misc_continue_exec->isChecked();
+    if (continueexec) {
+      popup(POPUP_TIME, "6502 running during menus");
+    } else {
+      popup(POPUP_TIME, "6502 paused during menus");
+    }
+
+  } else if (ret == misc_log_6522) {
+    log6522 = misc_log_6522->isChecked();
+    if (sndddnoise) {
+      popup(POPUP_TIME, "6522 write logging enabled");
+    } else {
+      popup(POPUP_TIME, "6522 write logging disabled");
+    }
+
   }
 
   if (resetit) {

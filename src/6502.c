@@ -35,6 +35,8 @@ uint8_t *roms_normal;
 
 int otherstuffcount=0;
 
+int continueexec=1;
+
 void initmem()
 {
 
@@ -1198,7 +1200,7 @@ void update_atom_display(int linenum, int skip)
       drawline(lines+1);
     }
     // Halt the emulation if the menu is visible
-    if (show_menu) {
+    if (show_menu && !continueexec) {
       continue;
     }
     // Execute's 128 cycles worth of instructions
