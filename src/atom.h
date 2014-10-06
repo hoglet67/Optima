@@ -52,8 +52,6 @@ void unlockAtomScreen();
 extern char ejecttext[NUM_IDS][260];
 void setejecttext(int id, const char *fn);
 
-extern int tapecyc;
-
 extern int sndtape;
 
 int interrupt;

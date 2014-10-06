@@ -17,7 +17,6 @@ int     last_cyclecount = 0;
 /*SWARM - CTRL=LEFT, ADJ=RIGHT, REPT=FIRE*/
 /*PINBALL - SHIFT,REPT*/
 int output;
-int tapecyc = 0;
 int inchunk;
 int intone = 0, tapedat, hightone = 0;
 int bytevalid = 0, bitvalid = 0;
@@ -203,13 +202,13 @@ void polltape()
 
 		if (the_cpu->tapeon)
 		{
-			tapecyc += getcsw();
+			the_cpu->tapecyc += getcsw();
 			tapedat = !tapedat;
 		}
 	}
 	else
 	{
-	  	tapecyc += 794;
+	  	the_cpu->tapecyc += 794;
 	  	intone ^= 0x10;
 		if (the_cpu->tapeon)
 		{

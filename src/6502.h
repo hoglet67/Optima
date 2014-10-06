@@ -62,8 +62,8 @@ typedef struct {
   uint16_t pc_tapeon; //+50
   uint16_t pc_tapeoff; //+52  
   uint16_t tapeon; //+54
-  uint32_t cyclesTotal;	// +56
-  uint32_t spare;	// +60
+  uint32_t tapecyc;	// +56
+  uint32_t cyclesTotal;	// +60
   VIA via; // +64
 } M6502;
 

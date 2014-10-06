@@ -286,6 +286,7 @@ void reset6502()
 	the_cpu->nmi =0;
 
 	the_cpu->tapeon = 0;
+	the_cpu->tapecyc = 0;
 	the_cpu->pc_tapeon = 0xFB8E;
 	the_cpu->pc_tapeoff = 0xC2CF;
 
@@ -1202,13 +1203,9 @@ void update_atom_display(int linenum, int skip)
     }
     // Execute's 128 cycles worth of instructions
     exec6502();
-    // Generate 128 cycles with of sound (4 samples at 31250Hz)
+    // Generate 128 cycles worth of sound (4 samples at 31250Hz)
     pollsound();
     
-    tapecyc -= 512;
-    if (tapecyc < 0) {
-      polltape();
-    }
     // Update the via, etc
     do_poll(the_cpu, 128);
   }

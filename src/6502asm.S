@@ -26,8 +26,8 @@ CPU_PC_TRIGGERS_1=48
 CPU_PC_TAPEON=50
 CPU_PC_TAPEOFF=52
 CPU_TAPEON=54
-CPU_CYCLES_TOTAL=56	
-CPU_SPARE=60
+CPU_TAPECYC=56
+CPU_CYCLES_TOTAL=60	
 VIA_T1C=64
 VIA_T2C=68
 VIA_ACR=72
@@ -223,15 +223,31 @@ no_interrupt:
 	subs %r0, %r1
 	str  %r0,[%r4, #CPU_CYCLES]
 
-	@ TODO: Update Tape Counter
-	@ tapecyc -= (c << 2); if (tapecyc < 0) polltape();
-		
+
+update_tape_counters:
+
+	@ Update Tape Counter
+        @ tapecyc -= (c << 2);
+	@ if (tapecyc < 0)
+	@     polltape();
+	
+	ldr  %r0,[%r4, #CPU_TAPECYC]
+	subs %r0, %r1, lsl #2
+	str  %r0,[%r4, #CPU_TAPECYC]
+	bpl update_via_counters
+
+	push {%r1, %lr}
+	bl polltape
+	pop {%r1, %lr}
+
+update_via_counters:
+	
 	@ Update Via Timers
     @ via.t1c -= c;
 	@ if (!(via.acr & 0x20))
 	@    via.t2c -= c;
 	@ if (via.t1c < -1 || via.t2c < -1)
-	@	updatetimers();
+	@    updatetimers();
 		
 	ldr  %r0,[%r4, #VIA_T1C]
 	subs %r0, %r1
@@ -253,6 +269,7 @@ check_counter_hits:
 	ldr  %r0,[%r4, #VIA_T1C]
 	cmp  %r0, #-1
 	blt  do_update_timers
+
 	
 
 continue_executing:
