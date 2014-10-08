@@ -269,25 +269,38 @@ void at_process(void)
             }
             else if (received == CMD_READ_PORT) // read portb
             {
-
 		// Joystick support
 
 			if (joyst)
 			{
 			  JOYSTICK = 255;
-			  //poll_joystick();
-			  //if (joy_right)
-			  // JOYSTICK ^= 1;
-			  //if (joy_left)
-			  //   JOYSTICK ^= 2;
-			  //if (joy_down)
-			  //   JOYSTICK ^= 4;
-			  //if (joy_up)
-			  //   JOYSTICK ^= 8;
-			  //if (joy[0].button[0].b) // Fire
-			  //   JOYSTICK ^= 16;
 
-              	  WriteDataPort(JOYSTICK);
+			  ALLEGRO_JOYSTICK *joystick = al_get_joystick(0);
+			  if (joystick) {
+			    ALLEGRO_JOYSTICK_STATE state;
+			    al_get_joystick_state(joystick, &state);
+			    // Right
+			    if (state.stick[0].axis[0] > 0.5) {
+			      JOYSTICK ^= 1;
+			    }
+			    // Left
+			    if (state.stick[0].axis[0] < -0.5) {
+			      JOYSTICK ^= 2;
+			    }
+			    // Down
+			    if (state.stick[0].axis[1] > 0.5) {
+			      JOYSTICK ^= 4;
+			    }
+			    // Up
+			    if (state.stick[0].axis[1] < -0.5) {
+			      JOYSTICK ^= 8;
+			    }
+			    // Fire
+			    if (state.button[0] > 0) {
+			      JOYSTICK ^= 16;
+			    }
+			  }
+			  WriteDataPort(JOYSTICK);
 			}
 			else
             	{

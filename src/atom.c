@@ -80,10 +80,12 @@ void atom_reset(int power_on)
 	reset8271();
 	gfxmode=0;
 	reset6502();
-	rpclog("atom_reset():done\n");
 
-      // Init joystick
-      // install_joystick(JOY_TYPE_AUTODETECT);
+	if (!al_install_joystick()) {
+	  rpclog("Failed to install joystick");
+	}
+
+	rpclog("atom_reset():done\n");
 
 }
 

@@ -121,6 +121,8 @@ TGUI_RadioMenuItem *settings_sound_ddvol_100;
 TGUI_TextMenuItem *settings_keyboard_redefine;
 TGUI_TextMenuItem *settings_keyboard_default;
 
+TGUI_CheckMenuItem *settings_joystick;
+
 TGUI_TextMenuItem *misc_screenshot;
 TGUI_CheckMenuItem *misc_continue_exec;
 TGUI_CheckMenuItem *misc_log_6522;
@@ -260,6 +262,7 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontS
   settingsItems.push_back(new TGUI_SubMenuItem("RamRom", settingsRamRomMenu));
   settingsItems.push_back(new TGUI_SubMenuItem("Sound", settingsSoundMenu));
   settingsItems.push_back(new TGUI_SubMenuItem("Keyboard", settingsKeyboardMenu));
+  settingsItems.push_back(settings_joystick = new TGUI_CheckMenuItem("Joystick PORTB", 0, 0));
   TGUI_Splitter *settingsMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsItems.size(), TGUI_VERTICAL, false, settingsItems);
   settingsMenu->setPadding(splitterPad, splitterPad);
 
@@ -378,6 +381,7 @@ void optima_gui_refresh() {
   settings_sound_sidfilter->setChecked(sndsidfilter);
   settings_sound_tapenoise->setChecked(tpon);
   settings_sound_discnoise->setChecked(sndddnoise);
+  settings_joystick->setChecked(joyst);
   misc_continue_exec->setChecked(continueexec);
   misc_log_6522->setChecked(log6522);
 }
@@ -696,6 +700,14 @@ void optima_gui_update() {
     }
     popup(POPUP_TIME, "Reset key bindings to default");
 
+  } else if (ret == settings_joystick) {
+    joyst = settings_joystick->isChecked();
+    if (joyst) {
+      popup(POPUP_TIME, "Joystick enabled");
+    } else {
+      popup(POPUP_TIME, "Joystick disabled");
+    }
+
   } else if (ret == misc_screenshot) {
     std::string initial = screenshot_filename();
     file_browser_open("Please enter screenshot name name", "screenshots", ID_SCREENSHOT, initial);
@@ -818,10 +830,6 @@ void optima_gui_speed()
   emuspeed = (int)active_menu->dp;
   changetimerspeed(timerspeeds[emuspeed]);
   fskipmax = frameskips[emuspeed];
-}
-void optima_gui_joystk_en()
-{
-  joyst = !joyst;
 }
 #endif
 
