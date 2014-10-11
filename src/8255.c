@@ -208,7 +208,7 @@ void polltape()
 	}
 	else
 	{
-	  	the_cpu->tapecyc += 794;
+	  	the_cpu->tapecyc += 833;
 	  	intone ^= 0x10;
 		if (the_cpu->tapeon)
 		{
