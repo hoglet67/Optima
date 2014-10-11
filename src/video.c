@@ -17,6 +17,7 @@
 extern M6502* the_cpu;
 
 int show_menu = 0;
+int last_menu = 0;
 
 int fullscreen = 1;
 
@@ -289,7 +290,6 @@ void togglepal() {
 }
 
 int frmcount;
-int fskipcount = 0;
 
 char scrshotname[260];
 int savescrshot = 0;
@@ -312,11 +312,13 @@ void drawline(int line)
 	int x, xx;
 	uint8_t temp;
 
+	// Reduce the update rate when fasttape is active, unless menu is showing
+	int ftskip = the_cpu->tapeon && fasttape && !show_menu && frmcount < refreshRate;
 
 	if (!line)
 		vbl = cy = sy = 0;
 		
-	if (line < 192)
+	if (!ftskip && line < 192)
 	{
 
 	  unsigned int *ptr = (unsigned int *)(lr->data + lr->pitch * line);
@@ -563,66 +565,64 @@ void drawline(int line)
 		}
 	}
 
-	if (line == 192)
+	if (!ftskip && line == 192)
 	{
 	  // startblit();
-		frmcount++;
-		fskipcount++;
 
 		if (savescrshot)
 		{
 			savescrshot = 0;
 		}
 
-		if ((!(the_cpu->tapeon && fasttape) && fskipcount >= fskipmax) || frmcount == refreshRate)
-		{
-			fskipcount = 0;
 
-			unsigned int border;
-			// Work out border colour
-			if (gfxmode & 1) {
-			  // Graphics
-			  border = semigrcols[colourboard][css << 1];
-			} else {
-			  // Text, so use black
-			  border = textcols[colourboard][0];
-			}
-
-			unlockAtomScreen();
-
-			al_set_target_bitmap(al_get_backbuffer(display));
-			al_clear_to_color(al_map_rgb((border >> 16) & 255, (border >> 8) & 255, border & 255));
-			al_draw_scaled_bitmap(atomscreen, 0, 0, screenW, screenH, scaleX, scaleY, scaleW, scaleH, 0);
-
-			// If a popup is active, then render it
-			if (popup_time) {
-			  float a = popup_time >= POPUP_DECAY ? 1.0 : popup_time / (float) POPUP_DECAY;
-			  al_draw_text(font, al_map_rgba_f(a, 0.0, 0.0, a), (displayW >> 1), (displayH >> 1), ALLEGRO_ALIGN_CENTRE, popup_message);
-			  popup_time--;
-			}
-
-			// If the menu is active, then render it
-			if (show_menu) {
-			  optima_gui_draw();
-			  ALLEGRO_MOUSE_STATE mouseState;
-			  al_get_mouse_state(&mouseState);
-			  al_draw_bitmap(cursor, mouseState.x, mouseState.y, 0);
-			}
-
-			al_flip_display();
-
-			lockAtomScreen();
-
-			frmcount = 0;
+		unsigned int border;
+		// Work out border colour
+		if (gfxmode & 1) {
+		  // Graphics
+		  border = semigrcols[colourboard][css << 1];
+		} else {
+		  // Text, so use black
+		  border = textcols[colourboard][0];
 		}
-		endblit();
+
+		unlockAtomScreen();
+		
+		al_set_target_bitmap(al_get_backbuffer(display));
+		al_clear_to_color(al_map_rgb((border >> 16) & 255, (border >> 8) & 255, border & 255));
+		al_draw_scaled_bitmap(atomscreen, 0, 0, screenW, screenH, scaleX, scaleY, scaleW, scaleH, 0);
+		
+		// If a popup is active, then render it
+		if (popup_time) {
+		  float a = popup_time >= POPUP_DECAY ? 1.0 : popup_time / (float) POPUP_DECAY;
+		  al_draw_text(font, al_map_rgba_f(a, 0.0, 0.0, a), (displayW >> 1), (displayH >> 1), ALLEGRO_ALIGN_CENTRE, popup_message);
+		  popup_time--;
+		}
+
+		// If the menu is active, then render it
+		if (show_menu) {
+		  optima_gui_draw();
+		  ALLEGRO_MOUSE_STATE mouseState;
+		  al_get_mouse_state(&mouseState);
+		  al_draw_bitmap(cursor, mouseState.x, mouseState.y, 0);
+		}
+		
+		al_flip_display();
+
+		lockAtomScreen();
+		
+		frmcount = 0;
+
 	}
+	endblit();
 
-	if (line == 200)
-		vbl = 1;
-
-	if (line == 261)
-		vbl = 0;
+	if (line == 200) {
+	  vbl = 1;
+	}	  
+	if (line == 261) {
+	  vbl = 0;
+	  last_menu = show_menu;
+	  frmcount++;
+	}
 
 	if ((line == 261 && !pal) || line == 311)
 	{

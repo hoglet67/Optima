@@ -529,8 +529,8 @@ void optima_gui_update() {
     popup(POPUP_TIME, "Normal tape speed");
 
   } else if (ret == tape_speed_fast) {
-    popup(POPUP_TIME, "Not yet implemented!!!");
-    // fasttape = 1;
+    fasttape = 1;
+    popup(POPUP_TIME, "Fast tape speed");
 
   } else if (ret == disc_load0) {
     file_browser_open("Please choose a disc image", "disks", ID_DISK0, "");

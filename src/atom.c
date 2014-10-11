@@ -201,7 +201,6 @@ void atom_run()
   ALLEGRO_EVENT e;
   al_wait_for_event(eventQueue, &e);
 
-
   //rpclog("atom_run() event type = %d\n", e.type;)
   
   if (e.type == ALLEGRO_EVENT_TIMER) {
@@ -237,8 +236,10 @@ void atom_run()
   } 
 
   if (need_redraw) {
-
-    int skip = !al_event_queue_is_empty(eventQueue);
+    
+    // All bets are off when running in fast tape mode....
+    int fasttapeactive = the_cpu->tapeon && fasttape && !show_menu;
+    int skip = !al_event_queue_is_empty(eventQueue) && !fasttapeactive;
 
     if (skip) {
       skipped++;
@@ -251,7 +252,7 @@ void atom_run()
     // double t1 = al_get_time();
     // Alse executes a frame's worth of 6502 code...
 
-    update_atom_display(pal ? 312 : 262, skip);
+    update_atom_display((pal ? 312 : 262) * (fasttapeactive ? 5 : 1), skip);
     // rpclog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
 
 
