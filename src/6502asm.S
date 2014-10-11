@@ -266,7 +266,7 @@ check_counter_hits:
 	ldr  %r0,[%r4, #VIA_T1C]
 	cmp  %r0, #-1
 	blt  do_update_timers
-	ldr  %r0,[%r4, #VIA_T1C]
+	ldr  %r0,[%r4, #VIA_T2C]
 	cmp  %r0, #-1
 	blt  do_update_timers
 
