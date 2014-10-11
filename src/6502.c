@@ -300,6 +300,7 @@ void reset6502()
 int adc_bcd(M6502* cpu, uint8_t temp) {
 	//rpclog("Doing ADC BCD! %d", temp);
 	register int ah=0;
+	cpu->p &= ~(FLAG_Z | FLAG_N);
 	register uint8_t tempb = cpu->a+temp+((cpu->p & FLAG_C)?1:0);
 	if (!tempb)
 	   cpu->p |= FLAG_Z;
@@ -325,7 +326,8 @@ int adc_bcd(M6502* cpu, uint8_t temp) {
 int sbc_bcd(M6502* cpu, uint8_t temp) {
 	register int hc6=0;
 	cpu->p &= ~(FLAG_Z | FLAG_N);
-	if (!((cpu->a-temp)-((cpu->p & FLAG_C)?0:1)))
+	register uint8_t tempb = cpu->a-temp-((cpu->p & FLAG_C)?0:1);
+	if (!tempb)
 	   cpu->p |= FLAG_Z;
 	register int al=(cpu->a&15)-(temp&15)-((cpu->p & FLAG_C)?0:1);
 	if (al&16) {
@@ -337,7 +339,7 @@ int sbc_bcd(M6502* cpu, uint8_t temp) {
 	if (hc6) ah--;
 	if ((cpu->a-(temp+((cpu->p & FLAG_C)?0:1)))&0x80)
 	   cpu->p |= FLAG_N;
-	SET_FLAG(FLAG_V, (((cpu->a-(temp+((cpu->p & FLAG_C)?0:1)))^temp)&128)&&((cpu->a^temp)&128));
+	SET_FLAG(FLAG_V, (((cpu->a ^ temp) & 0x80) && ((cpu->a ^ tempb) & 0x80)));
 	cpu->p |= FLAG_C;
 	if (ah&16)  {
 		cpu->p &= ~FLAG_C;
