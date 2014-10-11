@@ -57,7 +57,6 @@ char filelist[256][17];
 int filelistsize;
 int filepos[256];
 
-int drawscr = 0;
 int ddframes = 0;
 
 
@@ -211,19 +210,26 @@ void atom_run()
 
     count++;
     ddframes++;
-    drawscr++;
-    menu_timer--;
-    if (menu_timer == 0) {
-      show_menu = false;
+    if (menu_timer > 0) {
+      menu_timer--;
+      if (menu_timer == 0) {
+	show_menu = false;
+      }
     }
     if (show_menu) {
       optima_gui_update();
     }
 
   } else {
-    if (e.type == ALLEGRO_EVENT_MOUSE_AXES || show_menu) {
-      show_menu = true;
-      menu_timer = 120;
+    if (e.type == ALLEGRO_EVENT_MOUSE_AXES) {
+      if (show_menu) {
+	menu_timer = 120;
+      } else {
+	menu_timer++;
+	if (menu_timer > 15) {
+	  show_menu = true;
+	}
+      }
     }
     if (show_menu) {
       optima_gui_handleEvent(&e);
@@ -248,13 +254,6 @@ void atom_run()
     update_atom_display(pal ? 312 : 262, skip);
     // rpclog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
 
-    if (the_cpu->tapeon && fasttape)
-      drawscr = 0;
-    else
-      drawscr -= 1;
-		
-    if (drawscr > 25)
-      drawscr = 0;
 
     if (ddframes >= 5) {
       ddframes -= 5 ;
