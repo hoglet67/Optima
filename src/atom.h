@@ -39,11 +39,14 @@ extern int displayW;
 extern int displayH;
 extern int continueexec;
 extern int log6522;
+extern int pal;
+extern int refreshRate;
 
 extern ALLEGRO_BITMAP *atomscreen;
 
 void lockAtomScreen();
 void unlockAtomScreen();
+void updateTimer();
 
 #define ID_DISK0 0
 #define ID_DISK1 1

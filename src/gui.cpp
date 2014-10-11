@@ -98,6 +98,7 @@ TGUI_CheckMenuItem *disc_defaultwriteprot;
 
 TGUI_CheckMenuItem *settings_video_snow;
 TGUI_CheckMenuItem *settings_video_fullscreen;
+TGUI_CheckMenuItem *settings_video_pal;
 
 TGUI_CheckMenuItem *settings_hardware_colourboard;
 TGUI_CheckMenuItem *settings_hardware_bbcmode;
@@ -211,6 +212,7 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontS
   // Create the settings/video menu
   settingsVideoItems.push_back(settings_video_snow = new TGUI_CheckMenuItem("Snow", 0, 0));
   settingsVideoItems.push_back(settings_video_fullscreen = new TGUI_CheckMenuItem("Fullscreen", 0, 0));
+  settingsVideoItems.push_back(settings_video_pal = new TGUI_CheckMenuItem("PAL (50Hz)", 0, 0));
   TGUI_Splitter *settingsVideoMenu = new TGUI_Splitter(0, 0, menuWidth, menuHeight * settingsVideoItems.size(), TGUI_VERTICAL, false, settingsVideoItems);
   settingsVideoMenu->setPadding(splitterPad, splitterPad);
 
@@ -372,6 +374,7 @@ void optima_gui_refresh() {
   disc_defaultwriteprot->setChecked(defaultwriteprot);
   settings_video_snow->setChecked(snow);
   settings_video_fullscreen->setChecked(fullscreen);
+  settings_video_pal->setChecked(pal);
   settings_hardware_colourboard->setChecked(colourboard);
   settings_hardware_bbcmode->setChecked(bbcmode);
   settings_ramrom_ramrom->setChecked(ramrom_enable);
@@ -581,6 +584,15 @@ void optima_gui_update() {
 
   } else if (ret == settings_video_fullscreen) {
     popup(POPUP_TIME, "Not yet implemented!!!");
+
+  } else if (ret == settings_video_pal) {
+    pal = settings_video_pal->isChecked();
+    updateTimer();
+    if (pal) {
+      popup(POPUP_TIME, "PAL mode (50Hz refresh)");
+    } else {
+      popup(POPUP_TIME, "NTSC mode (60Hz refresh)");
+    }
 
   } else if (ret == settings_hardware_colourboard) {
     colourboard = settings_hardware_colourboard->isChecked();

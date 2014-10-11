@@ -161,13 +161,6 @@ void atom_init(int argc, char **argv)
 	#ifndef WIN32
 	al_install_keyboard();
 	#endif
-	//install_mouse();
-
-	
-	// install_timer();
-	// install_int_ex(scrupdate, BPS_TO_TIMER(300));
-
-
 
 	inital();
 	sid_init();
@@ -178,7 +171,7 @@ void atom_init(int argc, char **argv)
 	atom_reset(1);
 
 
-	timer = al_create_timer(ALLEGRO_BPS_TO_SECS(60));	
+	timer = al_create_timer(ALLEGRO_BPS_TO_SECS(refreshRate));	
 	eventQueue = al_create_event_queue();
 	al_register_event_source(eventQueue, al_get_timer_event_source(timer));
 	al_start_timer(timer);
@@ -190,11 +183,10 @@ void atom_init(int argc, char **argv)
 	rpclog("atom_init() done\n");
 }
 
-void changetimerspeed(int i)
+void updateTimer()
 {
-  // remove_int(scrupdate);
-  //	install_int_ex(scrupdate, BPS_TO_TIMER(i * 6));
-  al_set_timer_speed(timer, ALLEGRO_BPS_TO_SECS(i));
+  refreshRate = pal ? 50 : 60;
+  al_set_timer_speed(timer, ALLEGRO_BPS_TO_SECS(refreshRate));
 }
 
 int oldf12 = 0;
@@ -252,8 +244,8 @@ void atom_run()
         
     // double t1 = al_get_time();
     // Alse executes a frame's worth of 6502 code...
-    // Decided *not* to emulate 50Hz updates
-    update_atom_display(262, skip);
+
+    update_atom_display(pal ? 312 : 262, skip);
     // rpclog("pc=%04x a=%02x x=%02x y=%02x s=%04x p=%02x\n", the_cpu->pc, the_cpu->a, the_cpu->x, the_cpu->y, the_cpu->s, the_cpu->p);
 
     if (the_cpu->tapeon && fasttape)

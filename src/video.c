@@ -108,6 +108,9 @@ int displayH;
 char popup_message[255];
 int popup_time = 0;
 
+int pal;
+int refreshRate;
+
 void popup(int time, char *message, ...) {
   va_list ap;
   va_start(ap, message);
@@ -125,6 +128,15 @@ void initvideo()
   displayW = info.x2 - info.x1;
   displayH = info.y2 - info.y1;
   rpclog("screen is %d x %d\n", displayW, displayH);
+
+  pal = displayH > 480 && displayH <= 576;
+  if (pal) {
+    refreshRate = 50;
+    rpclog("pal mode (50Hz)\n");
+  } else {
+    refreshRate = 60;
+    rpclog("ntsc mode (60Hz)\n");
+  }
 
   al_set_new_display_flags(ALLEGRO_FULLSCREEN);
 
@@ -562,7 +574,7 @@ void drawline(int line)
 			savescrshot = 0;
 		}
 
-		if ((!(the_cpu->tapeon && fasttape) && fskipcount >= fskipmax) || frmcount == 60)
+		if ((!(the_cpu->tapeon && fasttape) && fskipcount >= fskipmax) || frmcount == refreshRate)
 		{
 			fskipcount = 0;
 
@@ -612,7 +624,7 @@ void drawline(int line)
 	if (line == 261)
 		vbl = 0;
 
-	if (line == 261)
+	if ((line == 261 && !pal) || line == 311)
 	{
 		switch (gfxmode)
 		{
