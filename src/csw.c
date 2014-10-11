@@ -143,7 +143,7 @@ uint8_t findcswbyte()
 		{
 			c++;
 			count += d;
-			if (count >= 12500 /*13056*//*(3333*4)*/)
+			if (count >= 13056 /*12500*//*(3333*4)*/)
 			{
 				count = 0;
 				if (c >= 12)
