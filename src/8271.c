@@ -157,7 +157,6 @@ void seek8271()
 void write8271(uint16_t addr, uint8_t val)
 {
 //        rpclog("Write 8271 %04X %02X\n",addr,val);
-    rpclog("Write 8271 %04X %02X\n",addr,val);
 	switch (addr & 7)
 	{
 	case 0:         /*Command register*/
