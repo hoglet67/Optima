@@ -277,6 +277,9 @@ void at_process(void)
 
 			  ALLEGRO_JOYSTICK *joystick = al_get_joystick(0);
 			  if (joystick) {
+
+			    int numButtons = al_get_joystick_num_buttons(joystick);
+
 			    ALLEGRO_JOYSTICK_STATE state;
 			    al_get_joystick_state(joystick, &state);
 			    // Right
@@ -298,6 +301,21 @@ void at_process(void)
 			    // Fire
 			    if (state.button[0] > 0) {
 			      JOYSTICK ^= 16;
+			    }
+			    if (numButtons > 1) {
+			      if (state.button[1] > 0) {
+				JOYSTICK ^= 32;
+			      }
+			    }
+			    if (numButtons > 2) {
+			      if (state.button[2] > 0) {
+				JOYSTICK ^= 64;
+			      }
+			    }
+			    if (numButtons > 3) {
+			      if (state.button[3] > 0) {
+				JOYSTICK ^= 128;
+			      }
 			    }
 			  }
 			  WriteDataPort(JOYSTICK);
