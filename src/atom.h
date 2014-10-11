@@ -41,7 +41,8 @@ extern int continueexec;
 extern int log6522;
 extern int pal;
 extern int refreshRate;
-
+extern int catnum;
+extern char catnames[256][260];
 extern ALLEGRO_BITMAP *atomscreen;
 
 void lockAtomScreen();

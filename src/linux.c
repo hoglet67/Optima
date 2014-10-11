@@ -10,6 +10,9 @@
 
 int quited = 0;
 
+char catnames[256][260];
+int catnum = 0;
+
 void startblit()
 {
 }
@@ -24,6 +27,11 @@ int keylookup[128];
 
 void cataddname(char *s)
 {
+  if (catnum < 256) {
+      strcpy(catnames[catnum], s);
+      rpclog("%s\n", s); 
+      catnum++;
+    }
 }
 
 int main(int argc, char **argv)

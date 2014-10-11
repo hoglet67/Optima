@@ -12,6 +12,7 @@
 #define ID_ENTER_DISK0  4
 #define ID_ENTER_DISK1  5
 #define ID_SCREENSHOT   6
+#define ID_CATALOG      7
 
 
 extern "C" {
@@ -28,6 +29,7 @@ extern "C" {
 }
 
 void file_browser_open(std::string title, std::string dirpath, int mode, std::string initial);
+void catalog_open(std::string title, int mode);
 
 void file_browser_close();
 
@@ -405,6 +407,11 @@ void optima_gui_update() {
   } else if (ret == buttonOK || ret == buttonCancel) {
     bool reopen = false;
 
+    if (id == ID_CATALOG) {
+      file_browser_close();
+      return;
+    }
+
     std::string selectedstr;
     std::string filestr = fileName->getText();
     std::string dirstr = dirName->getText();
@@ -504,6 +511,7 @@ void optima_gui_update() {
   } else if (ret == tape_eject) {
     closeuef();
     closecsw();
+    catnum = 0;
     setejecttext(ID_TAPE, "");
     popup(POPUP_TIME, "Ejected tape");
 
@@ -514,7 +522,7 @@ void optima_gui_update() {
     popup(POPUP_TIME, "Rewound tape");
 
   } else if (ret == tape_catalog) {
-    popup(POPUP_TIME, "Not yet implemented!!!");
+    catalog_open("Tape Catalog", ID_CATALOG);
 
   } else if (ret == tape_speed_normal) {
     fasttape = 0;
@@ -807,6 +815,36 @@ void file_browser_close()
 {
   tgui::setFocus(NULL);
   fileBrowser->remove();
+}
+
+void catalog_open(std::string title, int mode)
+{
+  int i;
+
+  // Cleare text box
+  fileName->setText("");
+
+  // Update the mode
+  id = mode;
+
+  // Update the title
+  browserTitle = title;
+
+  // Update the directory name widget
+  dirName->setText("");
+
+  // Read the files from the dirpath directory into the files vector
+  files.clear();
+  for (i = 0; i < catnum; i++) {
+    files.push_back(catnames[i]);
+  }
+  fileList->setLabels(files);
+  fileList->setSelected(-1);
+  fileBrowser->setTitle(title);
+
+  tgui::setNewWidgetParent(0);
+  tgui::addWidget(fileBrowser);
+  return;
 }
 
 

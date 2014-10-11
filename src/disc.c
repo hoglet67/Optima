@@ -192,6 +192,7 @@ void loadtape(char *fn)
 	if (!p)
 		return;
 //        rpclog("do load %c\n",p[0]);
+	catnum = 0;
 	if (p[1] == 'u' || p[1] == 'U')
 		openuef(fn);
 	else
