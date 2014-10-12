@@ -14,8 +14,10 @@ uint8_t sample_buf[SAMPLE_BUF_SIZE];
 
 sound_t _fastSID;
 
+extern void rpclog();
+
 void sid_reset() {
-  printf("sid_reset() called\n");
+  rpclog("sid_reset() called\n");
   fastsid_reset(&_fastSID);
   sample_in_ptr = 0;
   memset(sample_buf, 0, SAMPLE_BUF_SIZE);
@@ -23,7 +25,7 @@ void sid_reset() {
 }
 
 void sid_init() {
-  printf("sid_init() called\n");
+  rpclog("sid_init() called\n");
   bzero(&_fastSID, sizeof(sound_t));
   _fastSID.sample_buf = sample_buf;
   fastsid_init(&_fastSID, SAMPLE_FREQ, SID_FREQ, sndsidfilter);
@@ -31,11 +33,11 @@ void sid_init() {
 }
 
 void sid_settype(int resamp, int model) {
-  printf("sid_settype is not implemented\n");
+  rpclog("sid_settype is not implemented\n");
 }
 
 uint8_t sid_read(uint16_t addr) {
-  printf("sid_read is not implemented\n");
+  rpclog("sid_read is not implemented\n");
 }
 
 void sid_write(uint16_t addr, uint8_t val) {
