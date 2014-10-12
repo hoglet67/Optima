@@ -27,15 +27,11 @@ Atomulator: $(OBJ) $(SIDOBJ) $(MMCOBJ)
 all : Atomulator
 
 clean :
-	rm *.o
-	rm Atomulator
-	rm *.res
+	rm -f */*.o *.o
+	rm -f Atomulator
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<
 
 %.o : %.cc
 	$(CPP) $(CFLAGS) -c $<
-
-atom.res: atom.rc
-	$(WINDRES) -i atom.rc --input-format=rc -o atom.res -O coff 
