@@ -175,9 +175,11 @@ void atom_init(int argc, char **argv)
 	al_register_event_source(eventQueue, al_get_timer_event_source(timer));
 	al_start_timer(timer);
 
-	al_register_event_source(eventQueue, al_get_mouse_event_source());
-
 	al_register_event_source(eventQueue, al_get_keyboard_event_source());
+
+	if (mousePresent) {
+	  al_register_event_source(eventQueue, al_get_mouse_event_source());
+	}
 
 	rpclog("atom_init() done\n");
 }

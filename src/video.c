@@ -158,13 +158,15 @@ void initvideo()
   al_flip_display();
 
   // Create the mouse cursor
-  cursor = al_create_bitmap(DEFAULT_CURSOR_WIDTH, DEFAULT_CURSOR_HEIGHT);
-  al_set_target_bitmap(cursor);
-  uint32_t *cursor = default_cursor;
-  for (y = 0; y < DEFAULT_CURSOR_HEIGHT; y++) {
-    for (x = 0; x < DEFAULT_CURSOR_WIDTH; x++) {
-      uint32_t col = *cursor++;
-      al_put_pixel(x, y, al_map_rgba(col & 255, (col >> 8) & 255, (col >> 16) & 255,  (col >> 24) & 255));
+  if (mousePresent) {
+    cursor = al_create_bitmap(DEFAULT_CURSOR_WIDTH, DEFAULT_CURSOR_HEIGHT);
+    al_set_target_bitmap(cursor);
+    uint32_t *cursor = default_cursor;
+    for (y = 0; y < DEFAULT_CURSOR_HEIGHT; y++) {
+      for (x = 0; x < DEFAULT_CURSOR_WIDTH; x++) {
+	uint32_t col = *cursor++;
+	al_put_pixel(x, y, al_map_rgba(col & 255, (col >> 8) & 255, (col >> 16) & 255,  (col >> 24) & 255));
+      }
     }
   }
 
@@ -176,10 +178,15 @@ void initvideo()
 
   // Set the popup font to approx 40 columns
   int popupFontSize = displayW / 40; 
+  if (popupFontSize < 24) {
+    popupFontSize = 24;
+  }
 
   // Set the menu font to approx 60 columns
   int menuFontSize = displayW / 60; 
-
+  if (menuFontSize < 14) {
+    menuFontSize = 14;
+  }
   font = al_load_font("fonts/DejaVuSans.ttf", popupFontSize, 0);
 
   if (!font) {
@@ -194,9 +201,9 @@ void initvideo()
 
   optima_gui_init(display, menufont, menuFontSize);
 
-  // Start the mouse in the top left corner
-  al_set_mouse_xy(display, 0, 0);
-
+  if (mousePresent) {
+    al_set_mouse_xy(display, 0, 0);
+  }
 }
 
 
@@ -601,9 +608,11 @@ void drawline(int line)
 		// If the menu is active, then render it
 		if (show_menu) {
 		  optima_gui_draw();
-		  ALLEGRO_MOUSE_STATE mouseState;
-		  al_get_mouse_state(&mouseState);
-		  al_draw_bitmap(cursor, mouseState.x, mouseState.y, 0);
+		  if (mousePresent) {
+		    ALLEGRO_MOUSE_STATE mouseState;
+		    al_get_mouse_state(&mouseState);
+		    al_draw_bitmap(cursor, mouseState.x, mouseState.y, 0);
+		  }
 		}
 		
 		al_flip_display();

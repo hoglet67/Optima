@@ -34,6 +34,8 @@ void cataddname(char *s)
     }
 }
 
+int mousePresent;
+
 int main(int argc, char **argv)
 {
   char *p;
@@ -95,11 +97,16 @@ int main(int argc, char **argv)
     writeprot[0] = writeprot[1] = 1;
   }
 
-  al_install_keyboard();
+  if (!al_install_keyboard()) {
+    fprintf(stderr, "failed to install keyboard driver!\n");
+    return -1;
+  }
 
   if (!al_install_mouse()) {
     fprintf(stderr, "failed to install mouse driver!\n");
-    return -1;
+    mousePresent = 0;
+  } else {
+    mousePresent = 1;
   }
 
   atom_init(argc, argv);

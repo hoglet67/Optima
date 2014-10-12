@@ -44,6 +44,7 @@ extern int refreshRate;
 extern int catnum;
 extern char catnames[256][260];
 extern ALLEGRO_BITMAP *atomscreen;
+extern int mousePresent;
 
 void lockAtomScreen();
 void unlockAtomScreen();

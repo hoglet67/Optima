@@ -170,7 +170,7 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontS
 
   fontSize = menuFontSize;
 
-  int menuWidth = displayW / 4;
+  int menuWidth = menuFontSize * 15;
   int splitterPad = 0;
   int menuPad = menuFontSize / 3;
 
@@ -280,12 +280,12 @@ void optima_gui_init(ALLEGRO_DISPLAY *display, ALLEGRO_FONT *font, int menuFontS
   // Create the menu bar
   menu_names.push_back("File        ");
   menu_splitters.push_back(fileMenu);
+  menu_names.push_back("Settings    ");
+  menu_splitters.push_back(settingsMenu);
   menu_names.push_back("Tape        ");
   menu_splitters.push_back(tapeMenu);
   menu_names.push_back("Disc        ");
   menu_splitters.push_back(discMenu);
-  menu_names.push_back("Settings    ");
-  menu_splitters.push_back(settingsMenu);
   menu_names.push_back("Misc        ");
   menu_splitters.push_back(miscMenu);
   menuBar = new TGUI_MenuBar(0, 0, displayW, menuHeight, menu_names, menu_splitters);
